@@ -120,10 +120,14 @@ logThread = Thread {
     }
 
     fun stop() {
-        process?.destroy()
+        val p = process
         process = null
         logThread?.interrupt()
         logThread = null
+        Thread {
+            p?.destroyForcibly()
+            p?.waitFor()
+        }.start()
         bridge.setStopped()
     }
 
