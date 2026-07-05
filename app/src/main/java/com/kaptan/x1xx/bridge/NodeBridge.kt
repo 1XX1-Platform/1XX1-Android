@@ -26,7 +26,10 @@ class NodeBridge private constructor() {
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
         .build()
-
+         private val sseClient = OkHttpClient.Builder()
+    .connectTimeout(5, TimeUnit.SECONDS)
+    .readTimeout(0, TimeUnit.SECONDS)
+    .build()
     private val logListeners = mutableListOf<(String) -> Unit>()
     private var sseCall: Call? = null
 
@@ -83,50 +86,61 @@ class NodeBridge private constructor() {
 
     // ─── SSE — canli log akisi ────────────────────────────────────────────────
 
-    fun startSSE(port: Int = _status.port) {
-        sseCall?.cancel()
-        val req = Request.Builder()
-            .url("http://localhost:$port/events")
-            .addHeader("Accept", "text/event-stream")
-            .build()
+fun startSSE(port: Int = _status.port) {
+sseCall?.cancel()
+val req = Request.Builder()
+.url("http://localhost:$port/events")
+.addHeader("Accept", "text/event-stream")
+.build()
 
-        sseCall = client.newCall(req)
-        sseCall?.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                log("[BRIDGE] SSE baglantisi koptu: ${e.message}")
-            }
-            override fun onResponse(call: Call, response: Response) {
-                response.body?.source()?.let { src ->
-                    try {
-                        while (!src.exhausted()) {
-                            val line = src.readUtf8Line() ?: break
-                            if (line.startsWith("data: ")) {
-                                val data = line.removePrefix("data: ")
-                                try {
-                                    val json = JSONObject(data)
-                                    val type = json.optString("type")
-                                    when (type) {
-                                        "pulse" -> {
-                                            val num = json.optJSONObject("data")?.optLong("number", 0) ?: 0
-                                            _status = _status.copy(pulseNumber = num)
-                                        }
-                                        "peer" -> fetchHealth(port)
-                                        "log"  -> {
-                                            val msg = json.optJSONObject("data")?.optString("message", "") ?: ""
-                                            if (msg.isNotEmpty()) log("[NODE] $msg")
-                                        }
-                                    }
-                                } catch (_: Exception) {}
-                            }
-                        }
-                    } catch (e: Exception) {
-                        log("[BRIDGE] SSE okuma hatasi: ${e.message}")
-                    }
-                }
-            }
-        })
-    }
-
+sseCall = sseClient.newCall(req)
+sseCall?.enqueue(object : Callback {
+override fun onFailure(call: Call, e: IOException) {
+log("[BRIDGE] SSE baglantisi koptu: ${e.message}")
+if (_status.running) {
+Thread {
+Thread.sleep(2000)
+startSSE(port)
+}.start()
+}
+}
+override fun onResponse(call: Call, response: Response) {
+response.body?.source()?.let { src ->
+try {
+while (!src.exhausted()) {
+val line = src.readUtf8Line() ?: break
+if (line.startsWith("data: ")) {
+val data = line.removePrefix("data: ")
+try {
+val json = JSONObject(data)
+val type = json.optString("type")
+when (type) {
+"pulse" -> {
+val num = json.optJSONObject("data")?.optLong("number", 0) ?: 0
+_status = _status.copy(pulseNumber = num)
+}
+"peer" -> fetchHealth(port)
+"log" -> {
+val msg = json.optJSONObject("data")?.optString("message", "") ?: ""
+if (msg.isNotEmpty()) log("[NODE] $msg")
+}
+}
+} catch (_: Exception) {}
+}
+}
+} catch (e: Exception) {
+log("[BRIDGE] SSE okuma hatasi: ${e.message}")
+}
+}
+if (_status.running) {
+Thread {
+Thread.sleep(2000)
+startSSE(port)
+}.start()
+}
+}
+})
+}
     // ─── Snapshot al ──────────────────────────────────────────────────────────
 
     fun takeSnapshot(callback: (Boolean, String) -> Unit) {

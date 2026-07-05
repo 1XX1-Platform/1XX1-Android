@@ -91,19 +91,21 @@ class NodeRuntimeLauncher(
             process = pb.start()
 
             // 4. Log akisini oku
-            logThread = Thread {
-                process?.inputStream?.bufferedReader()?.useLines { lines ->
-                    lines.forEach { line ->
-                        bridge.log(line)
-                        Log.d(TAG, line)
+            var readyFired = false
+logThread = Thread {
+    process?.inputStream?.bufferedReader()?.useLines { lines ->
+        lines.forEach { line ->
+            bridge.log(line)
+            Log.d(TAG, line)
 
-                        if (line.contains("ÇALIŞIYOR") || line.contains("localhost:$PORT")) {
-                            bridge.setRunning(PORT)
-                            onReady(PORT)
-                        }
-                    }
-                }
+            if (!readyFired && (line.contains("ÇALIŞIYOR") || line.contains("localhost:$PORT"))) {
+                readyFired = true
+                bridge.setRunning(PORT)
+                onReady(PORT)
             }
+        }
+    }
+}
             logThread?.start()
 
             val exitCode = process?.waitFor() ?: -1
