@@ -1,4 +1,4 @@
-package com.kaptan.x1xx1.service
+package com.kaptan.x1xx.service
 
 import android.app.*
 import android.content.Intent

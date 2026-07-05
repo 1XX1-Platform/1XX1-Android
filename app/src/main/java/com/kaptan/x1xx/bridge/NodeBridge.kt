@@ -1,4 +1,4 @@
-package com.kaptan.x1xx1.bridge
+package com.kaptan.x1xx.bridge
 
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType

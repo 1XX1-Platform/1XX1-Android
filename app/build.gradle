@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.kaptan.x1xx1'
+    namespace 'com.kaptan.x1xx'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.kaptan.x1xx1"
+        applicationId "com.kaptan.x1xx"
         minSdk 26
         targetSdk 34
         versionCode 1

@@ -1,6 +1,6 @@
-package com.kaptan.x1xx1.ui
+package com.kaptan.x1xx.ui
 
-import com.kaptan.x1xx1.R
+import com.kaptan.x1xx.R
 import android.content.Intent
 import android.os.Bundle
 import android.widget.*

@@ -1,4 +1,4 @@
-package com.kaptan.x1xx1.browser
+package com.kaptan.x1xx.browser
 
 import android.annotation.SuppressLint
 import android.content.Context
