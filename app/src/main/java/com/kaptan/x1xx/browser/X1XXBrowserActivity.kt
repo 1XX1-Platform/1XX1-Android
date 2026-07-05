@@ -276,8 +276,14 @@ class X1XXBrowserActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack()
-        else super.onBackPressed()
+        val currentUrl = webView.url ?: ""
+        if (currentUrl.startsWith("data:")) {
+            super.onBackPressed()
+        } else if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 
     override fun onResume() {
