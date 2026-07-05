@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * Android bu sinif uzerinden:
  *   - Durum sorgular (/health)
  *   - Log alir (SSE /events)
- *   - Komut gonderir (POST /admin/*)
+ *   - Komut gonderir (POST /admin/ *)
  */
 class NodeBridge private constructor() {
 
