@@ -46,6 +46,7 @@ class NodeForegroundService : Service() {
         launcher?.start(
             onReady = { port ->
                 bridge.log("[SERVICE] Node hazir: localhost:$port")
+			bridge.setRunning(port)
                 updateNotification("Aktif — localhost:$port")
             },
             onError = { err ->
@@ -58,7 +59,8 @@ class NodeForegroundService : Service() {
     private fun stopRuntime() {
         launcher?.stop()
         launcher = null
-        NodeBridge.instance.log("[SERVICE] Node durduruldu")
+        NodeBridge.instance.setStopped()
+		NodeBridge.instance.log("[SERVICE] Node durduruldu")
     }
 
     private fun buildNotification(text: String): Notification {
