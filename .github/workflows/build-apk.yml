@@ -3,7 +3,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,11 +12,11 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
-    - uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '7.5'
     - uses: android-actions/setup-android@v3
-    - run: gradle assembleDebug
+    - name: Build Debug APK
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug
     - uses: actions/upload-artifact@v4
       with:
         name: 1XX1-debug-apk
