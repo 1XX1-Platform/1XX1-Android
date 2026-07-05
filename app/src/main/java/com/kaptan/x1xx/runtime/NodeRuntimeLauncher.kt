@@ -10,10 +10,11 @@ import java.io.FileOutputStream
  * NodeRuntimeLauncher
  *
  * 1. assets/nodejs/ klasoründen Node.js binary'yi cihaza kopyalar
- * 2. assets/1xx1/ klasoründen 1XX1 TypeScript dosyalarini kopyalar
- * 3. Node.js process'i baslatir:
+ * 2. assets/nodejs/arm64/lib/ klasoründen gerekli shared library'leri kopyalar
+ * 3. assets/1xx1/ klasoründen 1XX1 TypeScript dosyalarini kopyalar
+ * 4. Node.js process'i baslatir (LD_LIBRARY_PATH ile kutuphaneleri gostererek):
  *    node --experimental-strip-types main.ts
- * 4. localhost:1331 hazir olunca onReady callback'ini cagirir
+ * 5. localhost:1331 hazir olunca onReady callback'ini cagirir
  *
  * Node.js binary Android icin:
  *   arm64-v8a: assets/nodejs/arm64/node
@@ -41,10 +42,13 @@ class NodeRuntimeLauncher(
                     return@Thread
                 }
 
-                // 2. 1XX1 dosyalarini kopyala
+                // 2. Gerekli shared library'leri kopyala
+                val libDir = extractNodeLibs()
+
+                // 3. 1XX1 dosyalarini kopyala
                 val appDir = extractAppFiles()
 
-                // 3. Process baslat
+                // 4. Process baslat
                 bridge.log("[LAUNCHER] Node.js baslatiliyor: $appDir")
 
                 val pb = ProcessBuilder(
@@ -58,12 +62,15 @@ class NodeRuntimeLauncher(
                     put("X1_NODE_ID",  "android-${android.os.Build.MODEL.replace(" ", "-")}")
                     put("X1_NO_BROWSER", "true")
                     put("HOME", context.filesDir.absolutePath)
+                    if (libDir != null) {
+                        put("LD_LIBRARY_PATH", libDir.absolutePath)
+                    }
                 }
                 pb.redirectErrorStream(true)
 
                 process = pb.start()
 
-                // 4. Log akisini oku
+                // 5. Log akisini oku
                 logThread = Thread {
                     process?.inputStream?.bufferedReader()?.useLines { lines ->
                         lines.forEach { line ->
@@ -129,6 +136,32 @@ class NodeRuntimeLauncher(
             // Asset yoksa — Termux'un node'unu dene
             bridge.log("[LAUNCHER] Asset bulunamadi, sistem node'u aranıyor...")
             findSystemNode()
+        }
+    }
+
+    private fun extractNodeLibs(): File? {
+        val libOutDir = File(context.filesDir, "nodelib")
+        libOutDir.mkdirs()
+
+        return try {
+            val libFiles = context.assets.list("nodejs/arm64/lib") ?: emptyArray()
+            if (libFiles.isEmpty()) {
+                bridge.log("[LAUNCHER] Kutuphane asset'i bulunamadi, atlaniyor")
+                return null
+            }
+            for (name in libFiles) {
+                val outFile = File(libOutDir, name)
+                context.assets.open("nodejs/arm64/lib/$name").use { input ->
+                    FileOutputStream(outFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+            bridge.log("[LAUNCHER] Kutuphaneler kopyalandi: ${libOutDir.absolutePath}")
+            libOutDir
+        } catch (e: Exception) {
+            bridge.log("[LAUNCHER] Kutuphane kopyalama hatasi: ${e.message}")
+            null
         }
     }
 
