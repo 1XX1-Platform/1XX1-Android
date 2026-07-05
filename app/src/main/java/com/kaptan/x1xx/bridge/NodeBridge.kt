@@ -67,7 +67,7 @@ class NodeBridge private constructor() {
             .build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                _status = _status.copy(running = false)
+                log("[BRIDGE] Health sorgusu basarisiz: ${e.message}")
             }
             override fun onResponse(call: Call, response: Response) {
                 response.use {
