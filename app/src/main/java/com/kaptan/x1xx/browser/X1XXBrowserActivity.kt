@@ -266,7 +266,7 @@ class X1XXBrowserActivity : AppCompatActivity() {
                 <body>
                   <h1>1XX1</h1>
                   <p>Node henüz başlatılmadı.<br>Ana ekrandan Node'u başlatın.</p>
-                  <button onclick="location.reload()">Yeniden Dene</button>
+                  <button onclick="window.location.href='http://localhost:1331'">Yeniden Dene</button>
                 </body>
                 </html>
                 """.trimIndent(),
