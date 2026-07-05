@@ -13,10 +13,12 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     - uses: android-actions/setup-android@v3
-    - name: Build Debug APK
+    - name: Install Gradle 7.5 and Build
       run: |
-        chmod +x gradlew
-        ./gradlew assembleDebug
+        wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
+        unzip -q gradle-7.5-bin.zip
+        export PATH=$PWD/gradle-7.5/bin:$PATH
+        gradle assembleDebug
     - uses: actions/upload-artifact@v4
       with:
         name: 1XX1-debug-apk
