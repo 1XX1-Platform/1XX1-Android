@@ -1,5 +1,6 @@
 package com.kaptan.x1xx.browser
 
+import com.kaptan.x1xx.R
 import com.kaptan.x1xx.bridge.NodeBridge
 import android.annotation.SuppressLint
 import android.content.Context
@@ -11,7 +12,6 @@ import android.webkit.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.kaptan.x1xx.bridge.NodeBridge
 
 /**
  * 1XX1Browser

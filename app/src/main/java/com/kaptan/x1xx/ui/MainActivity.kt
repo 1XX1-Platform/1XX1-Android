@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.kaptan.x1xx.R
 import com.kaptan.x1xx.bridge.NodeBridge
 import com.kaptan.x1xx.browser.X1XXBrowserActivity
 import com.kaptan.x1xx.service.NodeForegroundService
