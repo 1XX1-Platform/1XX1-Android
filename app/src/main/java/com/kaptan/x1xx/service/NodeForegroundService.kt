@@ -3,6 +3,7 @@ package com.kaptan.x1xx.service
 import android.app.*
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.kaptan.x1xx.R
 import com.kaptan.x1xx.bridge.NodeBridge
@@ -22,6 +23,12 @@ class NodeForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+		Thread.setDefaultUncaughtExceptionHandler { _, e ->
+			try {
+				val f = java.io.File(getExternalFilesDir(null), "1xx1_crash.log")
+				f.appendText("${java.util.Date()}\n${Log.getStackTraceString(e)}\n\n")
+			} catch (_: Exception) {}
+		}
         createNotificationChannel()
     }
 
