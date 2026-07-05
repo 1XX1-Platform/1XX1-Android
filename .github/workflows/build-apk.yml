@@ -16,9 +16,8 @@ jobs:
     - name: Install Gradle 7.5 and Build
       run: |
         wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
-        unzip -q gradle-7.5-bin.zip
-        export PATH=$PWD/gradle-7.5/bin:$PATH
-        gradle assembleDebug
+        unzip -q gradle-7.5-bin.zip -d /opt/gradle75
+        /opt/gradle75/gradle-7.5/bin/gradle assembleDebug
     - uses: actions/upload-artifact@v4
       with:
         name: 1XX1-debug-apk
