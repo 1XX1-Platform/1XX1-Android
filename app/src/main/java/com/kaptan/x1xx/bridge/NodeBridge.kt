@@ -32,6 +32,7 @@ class NodeBridge private constructor() {
     .build()
     private val logListeners = mutableListOf<(String) -> Unit>()
     private var sseCall: Call? = null
+    @Volatile private var sseGeneration = 0
 
     // Mevcut durum
     data class NodeStatus(
@@ -87,6 +88,7 @@ class NodeBridge private constructor() {
     // ─── SSE — canli log akisi ────────────────────────────────────────────────
 
 fun startSSE(port: Int = _status.port) {
+		val myGen = ++sseGeneration
 sseCall?.cancel()
 val req = Request.Builder()
 .url("http://localhost:$port/events")
@@ -132,6 +134,7 @@ if (msg.isNotEmpty()) log("[NODE] $msg")
 log("[BRIDGE] SSE okuma hatasi: ${e.message}")
 }
 }
+        if (myGen != sseGeneration) return
 if (_status.running) {
 Thread {
 Thread.sleep(2000)
