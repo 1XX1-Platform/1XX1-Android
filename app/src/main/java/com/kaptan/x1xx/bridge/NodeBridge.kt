@@ -75,7 +75,7 @@ class NodeBridge private constructor() {
                     _status = _status.copy(
                         running     = true,
                         nodeId      = json.optString("nodeId", "—"),
-                        pulseNumber = json.optLong("pulse", 0),
+                        pulseNumber = maxOf(_status.pulseNumber, json.optLong("pulse", 0)),
                         peerCount   = json.optInt("peers", 0),
                         port        = port
                     )
