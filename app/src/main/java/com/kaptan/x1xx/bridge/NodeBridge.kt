@@ -99,6 +99,7 @@ sseCall = sseClient.newCall(req)
 sseCall?.enqueue(object : Callback {
 override fun onFailure(call: Call, e: IOException) {
 log("[BRIDGE] SSE baglantisi koptu: ${e.message}")
+        if (myGen != sseGeneration) return
 if (_status.running) {
 Thread {
 Thread.sleep(2000)
