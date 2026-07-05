@@ -1,0 +1,91 @@
+# 1XX1 Platform — Helm Chart Values
+# Aşama 20 — Operasyon 20.2
+#
+# Kullanım:
+#   helm install x1 ./ops/deployment/helm -f values.yaml
+#   helm upgrade x1 ./ops/deployment/helm -f values.yaml --set replicaCount=5
+
+# ─── Node Konfigürasyonu ─────────────────────────────────────────────────────
+replicaCount: 3
+
+image:
+  repository: 1xx1-node
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# ─── Servis ──────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  apiPort: 8080
+  metricsPort: 9090
+
+# ─── Platform Ortam Değişkenleri ─────────────────────────────────────────────
+platform:
+  logLevel: info
+  logFormat: json
+  protocolVersion: "1.0.0"
+  gossipFanout: 6
+  gossipTTL: 8
+  pulseIntervalMs: 5000
+  snapshotIntervalMs: 60000
+  electionTimeoutMinMs: 150
+  electionTimeoutMaxMs: 300
+
+# ─── Kaynaklar ───────────────────────────────────────────────────────────────
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# ─── Kalıcı Depolama ─────────────────────────────────────────────────────────
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 10Gi
+
+# ─── Sağlık Kontrolleri ──────────────────────────────────────────────────────
+healthcheck:
+  liveness:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readiness:
+    path: /ready
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# ─── Observability ───────────────────────────────────────────────────────────
+monitoring:
+  enabled: true
+  prometheus:
+    scrapeInterval: 15s
+  serviceMonitor:
+    enabled: true
+
+# ─── Anti-Affinity (dağıtık sistem için kritik) ───────────────────────────────
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values: ["1xx1-node"]
+        topologyKey: kubernetes.io/hostname
+# → Her node'un farklı bir Kubernetes worker'da çalışmasını zorlar
+# → Tek makine arızasında cluster çalışmaya devam eder (Raft çoğunluğu)
+
+# ─── Pod Disruption Budget ────────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+# → Rolling update sırasında en az 2 node ayakta kalır (Raft garantisi)
+
+# ─── Gizli Bilgiler ──────────────────────────────────────────────────────────
+secrets:
+  # Kubernetes Secret objesinden alınır — values.yaml'a doğrudan yazılmaz
+  nodePrivateKeySecret: "x1-node-private-key"
+  tlsCertSecret: "x1-tls-cert"
