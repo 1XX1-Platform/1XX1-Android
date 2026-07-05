@@ -104,6 +104,11 @@ class NodeForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onTaskRemoved(rootIntent: android.content.Intent?) {
+		stopRuntime()
+		super.onTaskRemoved(rootIntent)
+	}
+
     override fun onDestroy() {
         stopRuntime()
         super.onDestroy()
