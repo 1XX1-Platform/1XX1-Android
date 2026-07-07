@@ -100,7 +100,6 @@ logThread = Thread {
 
             if (!readyFired && (line.contains("ÇALIŞIYOR") || line.contains("localhost:$PORT"))) {
                 readyFired = true
-                bridge.setRunning(PORT)
                 onReady(PORT)
             }
         }
