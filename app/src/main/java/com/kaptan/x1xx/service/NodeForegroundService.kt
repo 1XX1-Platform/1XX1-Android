@@ -105,7 +105,8 @@ class NodeForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onTaskRemoved(rootIntent: android.content.Intent?) {
-		stopRuntime()
+        val prefs = getSharedPreferences("x1xx", MODE_PRIVATE)
+        if (prefs.getInt("mode", 0) != 2) stopRuntime()
 		super.onTaskRemoved(rootIntent)
 	}
 
