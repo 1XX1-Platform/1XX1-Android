@@ -140,7 +140,7 @@ class X1XXBrowserActivity : AppCompatActivity() {
                 error: WebResourceError
             ) {
                 // localhost hatasi → Node baslamamis olabilir
-                if (request.url.toString().contains("localhost")) {
+                if (request.isForMainFrame && request.url.toString().contains("localhost")) {
                     showNodeOfflineMessage()
                 }
             }
@@ -248,7 +248,7 @@ class X1XXBrowserActivity : AppCompatActivity() {
 
     private fun showNodeOfflineMessage() {
         runOnUiThread {
-            webView.loadData(
+            webView.loadDataWithBaseURL(null, 
                 """
                 <html>
                 <head>
@@ -270,7 +270,7 @@ class X1XXBrowserActivity : AppCompatActivity() {
                 </body>
                 </html>
                 """.trimIndent(),
-                "text/html", "UTF-8"
+                "text/html", "UTF-8", null
             )
         }
     }
