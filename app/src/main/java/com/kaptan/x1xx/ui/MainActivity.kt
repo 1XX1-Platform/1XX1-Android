@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         btnBrowser.setOnClickListener { openBrowser() }
         btnBrowser.isEnabled = false
 
-        if (rbAuto.isChecked || rbBackground.isChecked) startNode()
+        if ((rbAuto.isChecked || rbBackground.isChecked) && !bridge.getStatus().running) startNode()
 
         lifecycleScope.launch {
             while (true) { updateUI(); delay(2000) }
