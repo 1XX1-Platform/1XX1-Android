@@ -666,7 +666,7 @@ async function bootstrap() {
     metrics.set("x1_pulse_eligible_projects", d?.eligible ?? 0);
     metrics.inc("x1_pulse_tick_total");
     broadcastSSE("pulse", {
-      number: d?.pulseNumber ?? 0,
+      number: snap?.pulseNumber ?? 0,
       items:  (snap?.ranked ?? []).slice(0, 10).map((r: any) => ({
         id:    r.projectId,
         name:  DEMO_PROJECTS.find((p) => p.id === r.projectId)?.name ?? r.projectId,
