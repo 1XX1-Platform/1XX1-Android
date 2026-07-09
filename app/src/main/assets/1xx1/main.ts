@@ -452,7 +452,7 @@ setInterval(refresh, 3000);
     if (snap) {
       res.write(`data: ${JSON.stringify({ type: "pulse", data: {
         number: snap.pulseNumber,
-        items:  snap.ranked.slice(0, 10).map((r) => ({
+        items:  (snap.ranked ?? []).slice(0, 10).map((r) => ({
           id:    r.projectId,
           name:  DEMO_PROJECTS.find((p) => p.id === r.projectId)?.name ?? r.projectId,
           score: r.score,
