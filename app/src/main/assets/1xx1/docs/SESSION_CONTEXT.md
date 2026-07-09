@@ -5,13 +5,13 @@
 "Para sıralamayı hiçbir zaman etkilemez." — temel değişmez.
 
 ## Geliştirici
-Kaptan (Emirhan) — Vienna, Samsung S23, Termux, tek cihaz geliştirme ortamı.
+Kaptan (Emirhan) — Vienna, Samsung S23, Termux ortamı.
 
 ## Teknik Özet
-- 44.000+ satır TypeScript, 189+ dosya
-- Node.js --experimental-strip-types ile çalışır (derleme yok)
-- Termux'ta test edildi, iki telefon LAN testinden geçti
-- ZIP: /mnt/user-data/outputs/1XX1-v1.0.0.zip
+- 214 TypeScript dosyası, 191 temiz (syntax OK)
+- Node.js --experimental-strip-types ile çalışır
+- İki telefon LAN testi geçti (peers: 1)
+- ZIP: /mnt/user-data/outputs/1XX1-v1.0.0.zip (738KB)
 
 ## FAZ Durumu
 | FAZ | İçerik | Durum |
@@ -30,65 +30,26 @@ Kaptan (Emirhan) — Vienna, Samsung S23, Termux, tek cihaz geliştirme ortamı.
 | FAZ X | System Stabilization (RuntimeContract, DriftDetector) | TAMAM |
 
 ## Core Freeze v1.0
-Core donduruldu. Yeni özellik Core'a girmez, üst katmana çıkar.
-Kural: "Bu kod olmadan sistem yaşayamaz mı?" → Evet ise Core, Hayır ise üst katman.
-
-## Mimari
-```
-Applications (Browser, AI, Store, Chat)
-        |
-FAZ 9  Bounded Autonomy (Governor, CAL, EBM)
-        |
-FAZ 8  System Coordination (BehaviorGraph, Policy)
-        |
-FAZ 7  Plugin Intelligence (Telemetry, Rollback)
-        |
-FAZ 6  Plugin Runtime (EPR, DAG, Lifecycle)
-        |
-Observability (FAZ 5)
-        |
-CORE FREEZE v1.0
-(Identity, Gossip, Raft, DHT, Trust, Transport)
-        |
-Hardware (Phone, RPi, Mini PC, Server)
-```
+Core donduruldu. Yeni özellik Core'a girmez.
+Kural: "Bu kod olmadan sistem yaşayamaz mı?" → Evet=Core, Hayır=üst katman.
 
 ## Mimari Kurallar
-1. CB (Circuit Breaker) = SAFETY  → her zaman override eder
-2. Intelligence = OPTIMIZE         → sadece oneri verir
-3. PolicyEngine = tek karar noktasi
-4. CAL sadece izin verilen eylemler: degrade/throttle/isolate/recommend_rollback
+1. CB (Circuit Breaker) = SAFETY → her zaman override eder
+2. Intelligence = OPTIMIZE → sadece öneri verir
+3. PolicyEngine = tek karar noktası
+4. CAL sadece: degrade/throttle/isolate/recommend_rollback
 5. CB override YASAK
+6. Knowledge → PolicyEngine'e VERİ sağlar, yerine GEÇMEZ
 
-## Calisma Kurallari
-1. Her faz sonunda Python/Node ile otomatik test yap
-2. Syntax kontrolu yap (tum plugin/ dizini)
-3. Test gecince ZIP ver
-4. Core'a dokunma
-5. Constructor'da private readonly kullanma (Node.js 26 desteklemiyor)
-6. interface yerine type = kullan (strip-types uyumlulugu)
-7. Test kodunda TypeScript cast (as const, as any) kullanma
+## Çalışma Kuralları
+1. Her faz sonunda Python/Node ile otomatik test
+2. Syntax kontrolü (tüm plugin/ ve core/ dizini)
+3. Test geçince ZIP ver
+4. Constructor'da private readonly kullanma (Node.js 26 desteklemiyor)
+5. interface yerine type = kullan
+6. Test kodunda TypeScript cast kullanma
 
-## Test Komutu
-```bash
-python3 -c "
-import subprocess, os
-root = '/home/claude/1xx1'
-errors = []
-for dp, dns, fns in os.walk(root):
-    dns[:] = [d for d in dns if d not in ('node_modules','__tests__','.git')]
-    for fn in fns:
-        if not fn.endswith('.ts'): continue
-        fp = os.path.join(dp, fn)
-        r = subprocess.run(['node','--experimental-strip-types','--check',fp],
-                          capture_output=True, text=True)
-        if 'ERR_UNSUPPORTED' in r.stderr or 'Script parameter' in r.stderr:
-            errors.append(fp.replace(root+'/',''))
-print('Temiz' if not errors else f'HATA: {errors}')
-"
-```
-
-## Termux Baslatma
+## Termux Başlatma
 ```bash
 cd ~/1XX1-v1.0.0
 node --experimental-strip-types main.ts
@@ -97,6 +58,70 @@ node --experimental-strip-types main.ts
 # http://localhost:1331/raft/status
 ```
 
-## Sonraki Adim
-FAZ 10 — Knowledge Layer
-GPT'den plan al, buraya getir, uygulayalim.
+## GitHub Repoları
+- Kaynak kod: https://github.com/1XX1-Platform/1XX1 (main branch)
+- Android proje: https://github.com/1XX1-Platform/1XX1-Android (main branch)
+- Token (workflow+repo): TOKEN_GIZLI
+
+## APK Build — DEVAM EDİYOR (Kaldığımız Yer)
+
+### Sorun
+GitHub Actions ile APK build yapılıyor ama Kotlin derleme hataları var.
+
+### Son hata (en son build)
+```
+e: NodeBridge.kt:160:1 Syntax error: Unclosed comment
+e: MainActivity.kt - Conflicting import: R ambiguous
+e: X1XXBrowserActivity.kt - Unresolved reference NodeBridge
+e: NodeRuntimeLauncher.kt - Unresolved reference NodeBridge, log, setRunning, setStopped
+e: NodeForegroundService.kt - Unresolved reference NodeBridge
+```
+
+### Yapılacak (yeni sohbette devam)
+```bash
+# 1. MainActivity'den duplicate R import kaldır
+sed -i '/import com.kaptan.x1xx.R/d' ~/1xx1-android/app/src/main/java/com/kaptan/x1xx/ui/MainActivity.kt
+
+# 2. Browser'dan da kaldır
+sed -i '/import com.kaptan.x1xx.R/d' ~/1xx1-android/app/src/main/java/com/kaptan/x1xx/browser/X1XXBrowserActivity.kt
+
+# 3. Push
+git add .
+git commit -m "Fix: remove duplicate R import"
+git push
+```
+
+Ama asıl sorun NodeBridge referansları — tüm Kotlin dosyaları Claude tarafında
+yeniden yazılmalı, temiz ve doğru import'larla.
+
+### Android Proje Yapısı
+```
+~/1xx1-android/
+  app/src/main/java/com/kaptan/x1xx/
+    bridge/NodeBridge.kt          ← OkHttp ile Node.js köprüsü
+    browser/X1XXBrowserActivity.kt ← WebView tarayıcı
+    runtime/NodeRuntimeLauncher.kt ← Node.js başlatıcı
+    service/NodeForegroundService.kt ← Arka plan servisi
+    ui/MainActivity.kt            ← Ana ekran
+  app/build.gradle
+    namespace 'com.kaptan.x1xx'
+    applicationId "com.kaptan.x1xx"
+    compileSdk 35, targetSdk 35, minSdk 26
+    AGP 8.5.2, Kotlin 2.0.21, JDK 17
+  build.gradle
+    AGP 8.5.2, Kotlin 2.0.21
+  gradle.properties
+    android.useAndroidX=true
+    android.enableJetifier=true
+    android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2
+  .github/workflows/build-apk.yml
+    JDK 17, assembleDebug, artifact upload
+```
+
+### Hedef
+GitHub Actions'ta BUILD SUCCESSFUL → APK indir → telefona kur → Termux'suz çalışsın
+
+## Sonraki Fazlar (APK bittikten sonra)
+FAZ 11 — Kullanıcı kimliği (hesap sistemi)
+FAZ 12 — Yaş + rol politikası
+FAZ 13 — Farklı UI'lar

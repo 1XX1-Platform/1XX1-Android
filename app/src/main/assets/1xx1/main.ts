@@ -82,7 +82,7 @@ const metrics  = createPlatformRegistry();
 // FAZ 1: Gossip Discovery
 const gossip = new GossipDiscovery(
   IDENTITY,
-  `http://0.0.0.0:${CFG.uiPort}`,
+  normalizeEndpoint("0.0.0.0", CFG.uiPort),  // asla 0.0.0.0 saklanmaz
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
     bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
@@ -452,7 +452,7 @@ setInterval(refresh, 3000);
     if (snap) {
       res.write(`data: ${JSON.stringify({ type: "pulse", data: {
         number: snap.pulseNumber,
-        items:  (snap.ranked ?? []).slice(0, 10).map((r) => ({
+        items:  snap.ranked.slice(0, 10).map((r) => ({
           id:    r.projectId,
           name:  DEMO_PROJECTS.find((p) => p.id === r.projectId)?.name ?? r.projectId,
           score: r.score,
@@ -542,6 +542,21 @@ setInterval(refresh, 3000);
     return;
   }
 
+  // ── /admin/add-peer?ip=X — Android discovery'den gelen peer ─────────────
+  if (u.pathname === "/admin/add-peer" && req.method === "POST") {
+    const ip = u.searchParams.get("ip");
+    if (!ip || ip === "0.0.0.0" || ip === "127.0.0.1") {
+      json({ ok: false, error: "gecersiz ip" }, 400);
+      return;
+    }
+    const endpoint = `http://${ip}:${CFG.uiPort}`;
+    gossip.addPeer(ip, endpoint, "android-discovery");
+    node.addPeer(ip, "mock_key");
+    log.info(`Android discovery peer eklendi: ${endpoint}`);
+    json({ ok: true, peer: endpoint });
+    return;
+  }
+
   // ── /admin/reconnect-peers ────────────────────────────────────────────────
   if (u.pathname === "/admin/reconnect-peers" && req.method === "POST") {
     for (const peer of CFG.peers) node.addPeer(peer, "mock_key");
@@ -567,6 +582,52 @@ let dht: KademliaEngine = new KademliaEngine("pending", "http://localhost:1331")
 // FAZ 5 — Observability module scope
 let observer: ClusterObserver;
 
+// ─── Subnet Taramasi — unicast LAN kesfi (multicast bagimsiz) ────────────────
+
+const sweptPeers = new Set<string>();
+
+async function probeHost(ip: string): Promise<void> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 500);
+    const res = await fetch(`http://${ip}:${CFG.uiPort}/health`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return;
+    const h = await res.json() as { nodeId?: string; version?: string };
+    if (!h.nodeId || h.nodeId === IDENTITY.nodeId || h.nodeId === CFG.nodeId) return;
+    if (sweptPeers.has(ip)) return;
+    sweptPeers.add(ip);
+    const endpoint = `http://${ip}:${CFG.uiPort}`;
+    gossip.addPeer(h.nodeId, endpoint, "subnet-sweep");
+    node.addPeer(ip, "mock_key");
+    log.info(`Subnet taramasi peer buldu: ${h.nodeId} @ ${endpoint}`);
+  } catch { /* cevap yok — normal */ }
+}
+
+async function sweepOnce(): Promise<void> {
+  const self = getLocalIP();
+  if (!self || self === "127.0.0.1" || self === "0.0.0.0") return;
+  const base = self.split(".").slice(0, 3).join(".");
+  const targets: string[] = [];
+  for (let i = 1; i <= 254; i++) {
+    const ip = `${base}.${i}`;
+    if (ip !== self) targets.push(ip);
+  }
+  // 16'lik gruplarla paralel yokla — tum /24 taramasi ~8-10 saniye
+  for (let i = 0; i < targets.length; i += 16) {
+    await Promise.all(targets.slice(i, i + 16).map(probeHost));
+  }
+}
+
+function startSubnetSweep(): void {
+  // Ilk tarama 3sn sonra (server ayaga kalksin), sonra her 45sn'de bir
+  setTimeout(() => {
+    log.info(`Subnet taramasi basladi: ${getLocalIP()}/24 @ port ${CFG.uiPort}`);
+    void sweepOnce();
+  }, 3000);
+  setInterval(() => { void sweepOnce(); }, 45_000);
+}
+
 async function bootstrap() {
   // 1. NodeRuntime
   await node.start();
@@ -582,11 +643,16 @@ async function bootstrap() {
     gossip.addPeer(peer, `http://${peer}:${CFG.uiPort}`, "manual");
   }
 
+  // 1b-2. SUBNET TARAMASI — multicast'e guvenmeyen unicast kesif
+  // Android hotspot'ta UDP multicast guvenilmez; bu tarama duz HTTP ile
+  // ayni /24 agindaki tum adresleri yoklar. Bulunan 1XX1 node'lari gossip'e eklenir.
+  startSubnetSweep();
+
   // 1c. FAZ 3 — DHT Engine baslat
   const extIp = await discoverExternalIp(log).catch(() => null);
   const selfEndpoint = extIp
     ? `http://${extIp}:${CFG.uiPort}`
-    : `http://localhost:${CFG.uiPort}`;
+    : normalizeEndpoint("0.0.0.0", CFG.uiPort);  // her zaman gercek LAN IP
 
   dht = new KademliaEngine(IDENTITY.nodeId, selfEndpoint, log);
 
@@ -642,9 +708,14 @@ async function bootstrap() {
   try {
     await ghostTransport.start();
     log.info(`Ghost Mesh aktif: koordinat=(${nodeCoord.x},${nodeCoord.y},${nodeCoord.z}), LAN multicast 239.255.13.31:13310`);
-    // Mesh'ten gelen peer'ları Raft/Gossip sistemine bağla
+    // Mesh'ten gelen peer'ları Gossip sistemine otomatik ekle
     ghostTransport.onMessage(async (env, from) => {
       bus.emit("peer:update" as never, { id: from, status: "active" });
+      // LAN'da kesfedilen peer'i gossip'e ekle
+      const lanIp = from.includes(":") ? from.split(":")[0] : from;
+      if (lanIp && lanIp !== "0.0.0.0" && lanIp !== "127.0.0.1") {
+        gossip.addPeer(from, `http://${lanIp}:${CFG.uiPort}`, "lan");
+      }
     });
   } catch (e) {
     log.warn(`Ghost Mesh başlatılamadı (normal — ağ izni gerekebilir): ${String(e)}`);
@@ -666,7 +737,7 @@ async function bootstrap() {
     metrics.set("x1_pulse_eligible_projects", d?.eligible ?? 0);
     metrics.inc("x1_pulse_tick_total");
     broadcastSSE("pulse", {
-      number: snap?.pulseNumber ?? 0,
+      number: d?.pulseNumber ?? 0,
       items:  (snap?.ranked ?? []).slice(0, 10).map((r: any) => ({
         id:    r.projectId,
         name:  DEMO_PROJECTS.find((p) => p.id === r.projectId)?.name ?? r.projectId,
