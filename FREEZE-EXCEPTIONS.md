@@ -10,3 +10,7 @@ Guncelleme 2026-07-10: Istisna 001 kontrolu cift kimlik uzayini (cihaz adi + Ed2
 Dosya: gossip-discovery.ts — removePeer + peersAlive public metodlari.
 Gerekce: Goodbye protokolu (anlik online/offline). Peer defteri mantigi
 degismedi, sadece iki okuma/silme kapisi acildi. Onay: Kaptan.
+## Istisna 002 - 2026-07-10
+Dosya: gossip-discovery.ts — removePeer + peersAlive public metodlari.
+Gerekce: Goodbye protokolu (anlik online/offline). Peer defteri mantigi
+degismedi, sadece iki okuma/silme kapisi acildi. Onay: Kaptan.
