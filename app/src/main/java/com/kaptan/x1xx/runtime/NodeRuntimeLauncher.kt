@@ -30,8 +30,10 @@ class NodeRuntimeLauncher(
 
     private var process: Process? = null
     private var logThread: Thread? = null
+    @Volatile private var stopping = false
 
     fun start(onReady: (Int) -> Unit, onError: (String) -> Unit) {
+        stopping = false
         Thread {
             try {
                 // 1. Node binary'nin yolunu bul (nativeLibraryDir'den, kopyalama yok)
@@ -89,6 +91,7 @@ class NodeRuntimeLauncher(
             pb.redirectErrorStream(true)
 
             process = pb.start()
+            if (stopping) { process?.destroyForcibly(); process = null; bridge.setStopped(); return }
 
             // 4. Log akisini oku
             var readyFired = false
@@ -119,6 +122,7 @@ logThread = Thread {
     }
 
     fun stop() {
+        stopping = true
         val p = process
         process = null
         logThread?.interrupt()

@@ -31,6 +31,7 @@ class NodeBridge private constructor() {
     .readTimeout(0, TimeUnit.SECONDS)
     .build()
     private val logListeners = mutableListOf<(String) -> Unit>()
+    private val logBuffer = ArrayDeque<String>()
     private var sseCall: Call? = null
     @Volatile private var sseGeneration = 0
     @Volatile private var healthFails = 0
@@ -169,10 +170,14 @@ startSSE(port)
     // ─── Log ──────────────────────────────────────────────────────────────────
 
     fun log(message: String) {
+        synchronized(logBuffer) { logBuffer.addLast(message); if (logBuffer.size > 200) logBuffer.removeFirst() }
         logListeners.forEach { it(message) }
     }
 
+    fun getLogHistory(): List<String> = synchronized(logBuffer) { logBuffer.toList() }
+
     fun onLog(listener: (String) -> Unit) {
+        logListeners.clear()
         logListeners.add(listener)
     }
 }

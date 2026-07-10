@@ -51,7 +51,7 @@ class NodeForegroundService : Service() {
     }
 
     private fun startRuntime() {
-        if (launcher != null) return
+        if (launcher != null) { NodeBridge.instance.log("[SERVICE] Zaten calisiyor, atlandi"); return }
         val bridge = NodeBridge.instance
         launcher = NodeRuntimeLauncher(applicationContext, bridge)
         launcher?.start(

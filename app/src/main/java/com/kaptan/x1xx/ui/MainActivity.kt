@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
             while (true) { updateUI(); if (bridge.getStatus().running) bridge.fetchHealth(); delay(2000) }
         }
 
+        bridge.getLogHistory().forEach { tvLog.append(it + "\n") }
         bridge.onLog { line ->
             runOnUiThread {
                 tvLog.append(line + "\n")
@@ -122,7 +123,7 @@ class MainActivity : AppCompatActivity() {
         tvNodeId.text = "Node: ${s.nodeId}"
         tvPulse.text  = "Pulse: #${s.pulseNumber}"
         tvPeers.text  = "Peers: ${s.peerCount}"
-        if (s.running) btnBrowser.isEnabled = true else { btnStart.isEnabled = true; btnStop.isEnabled = false; btnBrowser.isEnabled = false }
+        if (s.running) { btnStart.isEnabled = false; btnStop.isEnabled = true; btnBrowser.isEnabled = true } else { btnStart.isEnabled = true; btnStop.isEnabled = false; btnBrowser.isEnabled = false }
     }
 
     private fun log(msg: String) { tvLog.append("[APP] $msg\n") }
