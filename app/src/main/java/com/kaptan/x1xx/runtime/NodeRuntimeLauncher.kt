@@ -129,7 +129,7 @@ logThread = Thread {
         logThread = null
         Thread {
             p?.destroy()
-            if (p?.waitFor(2, java.util.concurrent.TimeUnit.SECONDS) != true) p?.destroy()
+            
             if (p?.waitFor(2, java.util.concurrent.TimeUnit.SECONDS) != true) p?.destroyForcibly()
             p?.waitFor()
         }.start()
