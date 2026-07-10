@@ -224,7 +224,13 @@ export class GossipDiscovery {
         const r = await fetch(`${peer.endpoint}/health`, { signal: controller.signal });
         clearTimeout(timer);
         if (r.ok) {
-          this._peers.markSeen(peer.nodeId);
+          const hid = (((await r.json().catch(() => ({}))) as { nodeId?: string }).nodeId ?? "");
+          if (hid && hid !== peer.nodeId) {
+            this._peers.remove(peer.nodeId);
+            this._logger?.warn(`Hayalet peer temizlendi (kimlik degisti): ${peer.nodeId.slice(0,12)} -> ${hid.slice(0,12)}`);
+          } else {
+            this._peers.markSeen(peer.nodeId);
+          }
         } else {
           this._peers.markDead(peer.nodeId);
         }

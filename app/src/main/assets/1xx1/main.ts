@@ -587,7 +587,8 @@ let observer: ClusterObserver;
 
 // ─── Subnet Taramasi — unicast LAN kesfi (multicast bagimsiz) ────────────────
 
-const sweptPeers = new Set<string>();
+const sweptPeers = new Map<string, number>();
+const SWEEP_TTL = 120_000; // 2 dk sonra yeniden duyur - resurrection kapisi
 
 async function probeHost(ip: string): Promise<void> {
   try {
@@ -598,8 +599,8 @@ async function probeHost(ip: string): Promise<void> {
     if (!res.ok) return;
     const h = await res.json() as { nodeId?: string; version?: string };
     if (!h.nodeId || h.nodeId === IDENTITY.nodeId || h.nodeId === CFG.nodeId) return;
-    if (sweptPeers.has(ip)) return;
-    sweptPeers.add(ip);
+    if (Date.now() - (sweptPeers.get(ip) ?? 0) < SWEEP_TTL) return;
+    sweptPeers.set(ip, Date.now());
     const endpoint = `http://${ip}:${CFG.uiPort}`;
     gossip.addPeer(h.nodeId, endpoint, "subnet-sweep");
     node.addPeer(ip, "mock_key");
