@@ -128,7 +128,8 @@ logThread = Thread {
         logThread?.interrupt()
         logThread = null
         Thread {
-            p?.destroyForcibly()
+            p?.destroy()
+            if (p?.waitFor(2, java.util.concurrent.TimeUnit.SECONDS) != true) p?.destroyForcibly()
             p?.waitFor()
         }.start()
         bridge.setStopped()

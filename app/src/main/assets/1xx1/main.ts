@@ -546,6 +546,29 @@ setInterval(refresh, 3000);
     return;
   }
 
+  // ── /gossip/goodbye?nodeId=X&identity=Y — peer kapiyi carparak cikti ────
+  if (u.pathname === "/gossip/goodbye" && req.method === "POST") {
+    const ids = [u.searchParams.get("nodeId"), u.searchParams.get("identity")].filter(Boolean) as string[];
+    if (ids.length === 0) { json({ ok: false, error: "kimlik gerekli" }, 400); return; }
+    for (const id of ids) gossip.removePeer(id);
+    log.warn(`Peer ayrildi (goodbye): ${ids[0].slice(0,12)}`);
+    json({ ok: true });
+    return;
+  }
+
+  // ── /admin/net-hint?ip=X — Android'den ag ipucu (sweep dogru arayuzden) ──
+  if (u.pathname === "/admin/net-hint") {
+    const ip = u.searchParams.get("ip");
+    if (!ip || ip === "0.0.0.0" || ip === "127.0.0.1") {
+      json({ ok: false, error: "gecersiz ip" }, 400);
+      return;
+    }
+    lanHintIP = ip;
+    log.info(`Ag ipucu alindi: sweep ${ip}/24 uzerinden`);
+    json({ ok: true, hint: ip });
+    return;
+  }
+
   // ── /admin/add-peer?ip=X — Android discovery'den gelen peer ─────────────
   if (u.pathname === "/admin/add-peer" && req.method === "POST") {
     const ip = u.searchParams.get("ip");
@@ -588,6 +611,7 @@ let observer: ClusterObserver;
 
 // ─── Subnet Taramasi — unicast LAN kesfi (multicast bagimsiz) ────────────────
 
+let lanHintIP: string | null = null;
 const sweptPeers = new Map<string, number>();
 const SWEEP_TTL = 120_000; // 2 dk sonra yeniden duyur - resurrection kapisi
 
@@ -610,7 +634,7 @@ async function probeHost(ip: string): Promise<void> {
 }
 
 async function sweepOnce(): Promise<void> {
-  const self = getLocalIP();
+  const self = lanHintIP ?? getLocalIP();
   if (!self || self === "127.0.0.1" || self === "0.0.0.0") return;
   const base = self.split(".").slice(0, 3).join(".");
   const targets: string[] = [];
@@ -627,7 +651,7 @@ async function sweepOnce(): Promise<void> {
 function startSubnetSweep(): void {
   // Ilk tarama 3sn sonra (server ayaga kalksin), sonra her 45sn'de bir
   setTimeout(() => {
-    log.info(`Subnet taramasi basladi: ${getLocalIP()}/24 @ port ${CFG.uiPort}`);
+    log.info(`Subnet taramasi basladi: ${lanHintIP ?? getLocalIP()}/24 @ port ${CFG.uiPort}`);
     void sweepOnce();
   }, 3000);
   setInterval(() => { void sweepOnce(); }, 45_000);
@@ -809,7 +833,16 @@ async function shutdown(signal: string) {
   server.close(() => { log.info("Sunucu kapatıldı."); process.exit(0); });
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+async function broadcastGoodbye(): Promise<void> {
+  const targets = gossip.peersAlive();
+  await Promise.allSettled(targets.map((pr) => {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 1500);
+    return fetch(`${pr.endpoint}/gossip/goodbye?nodeId=${encodeURIComponent(CFG.nodeId)}&identity=${encodeURIComponent(IDENTITY.nodeId)}`,
+      { method: "POST", signal: c.signal }).finally(() => clearTimeout(t));
+  }));
+}
+process.on("SIGTERM", () => { void broadcastGoodbye().finally(() => shutdown("SIGTERM")); });
 process.on("SIGINT",  () => shutdown("SIGINT"));
 
 // ─── Başlat ───────────────────────────────────────────────────────────────────

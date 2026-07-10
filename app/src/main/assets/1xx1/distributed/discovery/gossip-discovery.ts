@@ -89,6 +89,15 @@ export class GossipDiscovery {
     if (this._keepaliveTimer) clearInterval(this._keepaliveTimer);
   }
 
+  // ─── Goodbye destegi (Istisna 002) ──────────────────────────────────────
+  removePeer(nodeId: string): void {
+    this._peers.remove(nodeId);
+  }
+
+  peersAlive() {
+    return this._peers.alive();
+  }
+
   // ─── Manuel Peer Ekle (LAN discovery'den gelir) ──────────────────────────
 
   addPeer(nodeId: string, endpoint: string, source: "lan" | "gossip" | "manual" = "manual"): void {

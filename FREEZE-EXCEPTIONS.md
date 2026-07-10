@@ -6,3 +6,7 @@ hayalet peer'lar sonsuza dek canli tutuluyordu (sahada kanitlandi:
 nodeId kayitla uyusmazsa markSeen yerine remove.
 Kapsam: ~7 satir, sadece discovery katmani. Onay: Kaptan.
 Guncelleme 2026-07-10: Istisna 001 kontrolu cift kimlik uzayini (cihaz adi + Ed25519) tanir hale getirildi; sil-ekle dongusu kapatildi.
+## Istisna 002 - 2026-07-10
+Dosya: gossip-discovery.ts — removePeer + peersAlive public metodlari.
+Gerekce: Goodbye protokolu (anlik online/offline). Peer defteri mantigi
+degismedi, sadece iki okuma/silme kapisi acildi. Onay: Kaptan.

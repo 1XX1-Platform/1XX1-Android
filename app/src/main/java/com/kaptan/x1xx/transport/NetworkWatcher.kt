@@ -49,7 +49,7 @@ class NetworkWatcher(private val context: Context) {
     private fun sendHint(medium: String, ip: String) {
         val port = NodeBridge.instance.getStatus().port
         val req = Request.Builder()
-            .url("http://localhost:$port/transport/discovery?medium=$medium&ip=$ip")
+            .url("http://localhost:$port/admin/net-hint?ip=$ip")
             .build()
         client.newCall(req).enqueue(object : okhttp3.Callback {
             override fun onFailure(c: okhttp3.Call, e: java.io.IOException) {}
