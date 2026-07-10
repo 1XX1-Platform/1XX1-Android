@@ -628,15 +628,16 @@ async function probeHost(ip: string): Promise<void> {
     const res = await fetch(`http://${ip}:${CFG.uiPort}/health`, { signal: ctrl.signal });
     clearTimeout(timer);
     if (!res.ok) return;
-    const h = await res.json() as { nodeId?: string; version?: string };
-    if (!h.nodeId || h.nodeId === IDENTITY.nodeId || h.nodeId === CFG.nodeId) return;
+    const h = await res.json() as { nodeId?: string; identity?: string; version?: string };
+    const canonicalId = h.identity ?? h.nodeId;
+    if (!canonicalId || canonicalId === IDENTITY.nodeId || canonicalId === CFG.nodeId) return;
     if (Date.now() - (sweptPeers.get(ip) ?? 0) < SWEEP_TTL) return;
     sweptPeers.set(ip, Date.now());
     const endpoint = `http://${ip}:${CFG.uiPort}`;
-    gossip.addPeer(h.nodeId, endpoint, "subnet-sweep");
+    gossip.addPeer(canonicalId, endpoint, "subnet-sweep");
     node.addPeer(ip, "mock_key");
-    if (!gossip.peersAlive().some((pr) => pr.nodeId === h.nodeId)) {
-      log.info(`Subnet taramasi peer buldu: ${h.nodeId} @ ${endpoint}`);
+    if (!gossip.peersAlive().some((pr) => pr.nodeId === canonicalId)) {
+      log.info(`Subnet taramasi peer buldu: ${canonicalId} @ ${endpoint}`);
     }
   } catch { /* cevap yok — normal */ }
 }
