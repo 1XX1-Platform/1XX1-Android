@@ -33,6 +33,7 @@ class NodeBridge private constructor() {
     private val logListeners = mutableListOf<(String) -> Unit>()
     private var sseCall: Call? = null
     @Volatile private var sseGeneration = 0
+    @Volatile private var healthFails = 0
 
     // Mevcut durum
     data class NodeStatus(
@@ -67,11 +68,11 @@ class NodeBridge private constructor() {
             .build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                log("[BRIDGE] Health sorgusu basarisiz: ${e.message}")
+                log("[BRIDGE] Health sorgusu basarisiz: ${e.message}"); if (++healthFails >= 3 && _status.running) { _status = _status.copy(running = false); log("[BRIDGE] Node yanit vermiyor - OFFLINE") }
             }
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    if (!it.isSuccessful) return
+                    if (!it.isSuccessful) return; healthFails = 0
                     val json = JSONObject(it.body?.string() ?: return)
                     _status = _status.copy(
                         running     = true,
@@ -120,7 +121,7 @@ val type = json.optString("type")
 when (type) {
 "pulse" -> {
 val num = json.optJSONObject("data")?.optLong("number", 0) ?: 0
-_status = _status.copy(pulseNumber = num)
+synchronized(this@NodeBridge) { _status = _status.copy(pulseNumber = maxOf(_status.pulseNumber, num)) }
 }
 "peer" -> fetchHealth(port)
 "log" -> {

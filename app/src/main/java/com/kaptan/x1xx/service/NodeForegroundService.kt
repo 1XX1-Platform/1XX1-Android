@@ -8,6 +8,7 @@ import androidx.core.app.NotificationCompat
 import com.kaptan.x1xx.R
 import com.kaptan.x1xx.bridge.NodeBridge
 import com.kaptan.x1xx.runtime.NodeRuntimeLauncher
+import com.kaptan.x1xx.transport.NetworkWatcher
 import com.kaptan.x1xx.ui.MainActivity
 
 class NodeForegroundService : Service() {
@@ -20,6 +21,7 @@ class NodeForegroundService : Service() {
     }
 
     private var launcher: NodeRuntimeLauncher? = null
+    private var netWatcher: NetworkWatcher? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +35,7 @@ class NodeForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent == null) { startForeground(NOTIFICATION_ID, buildNotification("Devam ediyor")); if (getSharedPreferences("x1xx", MODE_PRIVATE).getInt("mode", 0) == 2) { if (launcher == null) startRuntime() } else { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }; return START_STICKY }
         when (intent?.action) {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification("Baslatiliyor..."))
@@ -48,12 +51,14 @@ class NodeForegroundService : Service() {
     }
 
     private fun startRuntime() {
+        if (launcher != null) return
         val bridge = NodeBridge.instance
         launcher = NodeRuntimeLauncher(applicationContext, bridge)
         launcher?.start(
             onReady = { port ->
                 bridge.log("[SERVICE] Node hazir: localhost:$port")
 			bridge.setRunning(port)
+                if (netWatcher == null) { netWatcher = NetworkWatcher(applicationContext).also { it.start() } }
                 updateNotification("Aktif — localhost:$port")
             },
             onError = { err ->
@@ -64,6 +69,7 @@ class NodeForegroundService : Service() {
     }
 
     private fun stopRuntime() {
+        netWatcher?.stop(); netWatcher = null
         launcher?.stop()
         launcher = null
         NodeBridge.instance.setStopped()
@@ -106,7 +112,7 @@ class NodeForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: android.content.Intent?) {
         val prefs = getSharedPreferences("x1xx", MODE_PRIVATE)
-        if (prefs.getInt("mode", 0) != 2) stopRuntime()
+        if (prefs.getInt("mode", 0) != 2) { stopRuntime(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }
 		super.onTaskRemoved(rootIntent)
 	}
 

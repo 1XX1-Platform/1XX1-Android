@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         if ((rbAuto.isChecked || rbBackground.isChecked) && !bridge.getStatus().running) startNode()
 
         lifecycleScope.launch {
-            while (true) { updateUI(); delay(2000) }
+            while (true) { updateUI(); if (bridge.getStatus().running) bridge.fetchHealth(); delay(2000) }
         }
 
         bridge.onLog { line ->
@@ -122,7 +122,7 @@ class MainActivity : AppCompatActivity() {
         tvNodeId.text = "Node: ${s.nodeId}"
         tvPulse.text  = "Pulse: #${s.pulseNumber}"
         tvPeers.text  = "Peers: ${s.peerCount}"
-        if (s.running) btnBrowser.isEnabled = true
+        if (s.running) btnBrowser.isEnabled = true else { btnStart.isEnabled = true; btnStop.isEnabled = false; btnBrowser.isEnabled = false }
     }
 
     private fun log(msg: String) { tvLog.append("[APP] $msg\n") }
