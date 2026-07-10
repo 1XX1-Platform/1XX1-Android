@@ -470,7 +470,10 @@ setInterval(refresh, 3000);
     }})}\n\n`);
 
     sseClients.add(res);
-    req.on("close", () => sseClients.delete(res));
+    const hb = setInterval(() => {
+      try { res.write(`: hb ${Date.now()}\n\n`); } catch { clearInterval(hb); }
+    }, 3000);
+    req.on("close", () => { clearInterval(hb); sseClients.delete(res); });
     return;
   }
 
