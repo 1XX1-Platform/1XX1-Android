@@ -31,3 +31,4 @@ jobs:
         name: 1XX1-debug-apk
         path: app/build/outputs/apk/debug/*.apk
         retention-days: 30
+        if-no-files-found: error
