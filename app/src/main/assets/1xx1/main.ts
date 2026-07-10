@@ -413,7 +413,7 @@ setInterval(refresh, 3000);
       nodeId:   CFG.nodeId,
       identity: IDENTITY.nodeId,
       role:     "leader",
-      peers:    node.peers.count(),
+      peers:    gossip.peersAlive().length,
       uptime:   process.uptime(),
       version:  "1.0.0",
       pulse:    pulse.currentSnapshot()?.pulseNumber ?? 0,
@@ -550,6 +550,12 @@ setInterval(refresh, 3000);
   if (u.pathname === "/gossip/goodbye" && req.method === "POST") {
     const ids = [u.searchParams.get("nodeId"), u.searchParams.get("identity")].filter(Boolean) as string[];
     if (ids.length === 0) { json({ ok: false, error: "kimlik gerekli" }, 400); return; }
+    for (const rec of gossip.peersAlive()) {
+      if (ids.includes(rec.nodeId)) {
+        const gip = rec.endpoint?.replace(/^https?:\/\//, "").split(":")[0];
+        if (gip) sweptPeers.delete(gip);
+      }
+    }
     for (const id of ids) gossip.removePeer(id);
     log.warn(`Peer ayrildi (goodbye): ${ids[0].slice(0,12)}`);
     json({ ok: true });
@@ -629,7 +635,9 @@ async function probeHost(ip: string): Promise<void> {
     const endpoint = `http://${ip}:${CFG.uiPort}`;
     gossip.addPeer(h.nodeId, endpoint, "subnet-sweep");
     node.addPeer(ip, "mock_key");
-    log.info(`Subnet taramasi peer buldu: ${h.nodeId} @ ${endpoint}`);
+    if (!gossip.peersAlive().some((pr) => pr.nodeId === h.nodeId)) {
+      log.info(`Subnet taramasi peer buldu: ${h.nodeId} @ ${endpoint}`);
+    }
   } catch { /* cevap yok — normal */ }
 }
 
