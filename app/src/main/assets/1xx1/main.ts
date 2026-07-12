@@ -85,6 +85,7 @@ const gossip = new GossipDiscovery(
   normalizeEndpoint("0.0.0.0", CFG.uiPort),  // asla 0.0.0.0 saklanmaz
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
+    if (nodeId === CFG.nodeId) return; // kendini sayma
     log.info(`Peer baglandi: ${nodeId.slice(0,16)} @ ${endpoint}`);
     bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
   },
@@ -553,7 +554,7 @@ setInterval(refresh, 3000);
 
   // ── /gossip/goodbye?nodeId=X&identity=Y — peer kapiyi carparak cikti ────
   if (u.pathname === "/gossip/goodbye" && req.method === "POST") {
-    const ids = [u.searchParams.get("nodeId"), u.searchParams.get("identity")].filter(Boolean) as string[];
+    const ids = [...new Set([u.searchParams.get("nodeId"), u.searchParams.get("identity")].filter(Boolean) as string[])];
     if (ids.length === 0) { json({ ok: false, error: "kimlik gerekli" }, 400); return; }
     for (const rec of gossip.peersAlive()) {
       if (ids.includes(rec.nodeId)) {
@@ -753,7 +754,7 @@ async function bootstrap() {
     log.info(`Ghost Mesh aktif: koordinat=(${nodeCoord.x},${nodeCoord.y},${nodeCoord.z}), LAN multicast 239.255.13.31:13310`);
     // Mesh'ten gelen peer'ları Gossip sistemine otomatik ekle
     ghostTransport.onMessage(async (env, from) => {
-      bus.emit("peer:update" as never, { id: from, status: "active" });
+      if (from !== CFG.nodeId) bus.emit("peer:update" as never, { id: from, status: "active" });
       // LAN'da kesfedilen peer'i gossip'e ekle
       const lanIp = from.includes(":") ? from.split(":")[0] : from;
       if (lanIp && lanIp !== "0.0.0.0" && lanIp !== "127.0.0.1") {
