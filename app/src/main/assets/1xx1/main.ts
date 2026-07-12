@@ -80,19 +80,25 @@ const bus      = new EventBus();
 const metrics  = createPlatformRegistry();
 
 // FAZ 1: Gossip Discovery
+const _knownPeers = new Set<string>(); // log spam önleme
 const gossip = new GossipDiscovery(
   IDENTITY,
   normalizeEndpoint("0.0.0.0", CFG.uiPort),  // asla 0.0.0.0 saklanmaz
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
     if (nodeId === CFG.nodeId) return; // kendini sayma
-    const isNew = !gossip.alivePeers().some((p: {nodeId: string}) => p.nodeId === nodeId);
-    if (isNew) log.info(`Peer baglandi: ${nodeId.slice(0,16)} @ ${endpoint}`);
-    bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
+    if (!_knownPeers.has(nodeId)) {
+      _knownPeers.add(nodeId);
+      const now = new Date().toISOString();
+      log.info(`Peer baglandi [${now}]: ${nodeId.slice(0,16)} @ ${endpoint}`);
+      bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
+    }
   },
   log,
   (nodeId) => {
-    log.info(`Peer ayrildi: ${nodeId.slice(0,16)}`);
+    _knownPeers.delete(nodeId);
+    const now = new Date().toISOString();
+    log.info(`Peer ayrildi [${now}]: ${nodeId.slice(0,16)}`);
     bus.emit("peer:update" as never, { id: nodeId, status: "dead" });
   }
 );
