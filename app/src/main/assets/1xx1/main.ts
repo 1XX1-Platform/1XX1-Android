@@ -86,7 +86,8 @@ const gossip = new GossipDiscovery(
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
     if (nodeId === CFG.nodeId) return; // kendini sayma
-    log.info(`Peer baglandi: ${nodeId.slice(0,16)} @ ${endpoint}`);
+    const isNew = !gossip.alivePeers().some((p: {nodeId: string}) => p.nodeId === nodeId);
+    if (isNew) log.info(`Peer baglandi: ${nodeId.slice(0,16)} @ ${endpoint}`);
     bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
   },
   log,
