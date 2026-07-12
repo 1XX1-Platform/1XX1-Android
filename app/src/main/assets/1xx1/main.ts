@@ -413,7 +413,7 @@ setInterval(refresh, 3000);
       nodeId:   CFG.nodeId,
       identity: IDENTITY.nodeId,
       role:     "leader",
-      peers:    gossip.peersAlive().length,
+      peers:    gossip.peerCount(),
       uptime:   process.uptime(),
       version:  "1.0.0",
       pulse:    pulse.currentSnapshot()?.pulseNumber ?? 0,
