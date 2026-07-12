@@ -25,6 +25,10 @@ const MAX_PEERS           = 256;
 export class PeerTable {
   private readonly _peers = new Map<string, PeerRecord>();
 
+  has(nodeId: string): boolean {
+    return this._peers.has(nodeId);
+  }
+
   upsert(record: Omit<PeerRecord, "reputation"> & { reputation?: number }): void {
     const existing = this._peers.get(record.nodeId);
 

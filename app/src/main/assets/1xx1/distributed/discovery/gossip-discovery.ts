@@ -118,6 +118,7 @@ export class GossipDiscovery {
 
     // Gelen node'u kaydet (kendimiz değilsek)
     if (req.nodeId !== this._identity.nodeId) {
+      const isNewPeer = !this._peers.has(req.nodeId);
       this._peers.upsert({
         nodeId:    req.nodeId,
         endpoint:  req.endpoint,
@@ -125,7 +126,7 @@ export class GossipDiscovery {
         term:      req.term,
         source:    "gossip",
       });
-      this._onNewPeer(req.nodeId, req.endpoint);
+      if (isNewPeer) this._onNewPeer(req.nodeId, req.endpoint);
     }
 
     // Kendi bildiğimiz peer'ları don (kendimizi ve karşıyı hariç tut)
