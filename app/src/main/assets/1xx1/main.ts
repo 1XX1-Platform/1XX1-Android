@@ -85,9 +85,14 @@ const gossip = new GossipDiscovery(
   normalizeEndpoint("0.0.0.0", CFG.uiPort),  // asla 0.0.0.0 saklanmaz
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
+    log.info(`Peer baglandi: ${nodeId.slice(0,16)} @ ${endpoint}`);
     bus.emit("peer:update" as never, { id: nodeId, endpoint, status: "active" });
   },
-  log
+  log,
+  (nodeId) => {
+    log.info(`Peer ayrildi: ${nodeId.slice(0,16)}`);
+    bus.emit("peer:update" as never, { id: nodeId, status: "dead" });
+  }
 );
 
 // NodeRuntime

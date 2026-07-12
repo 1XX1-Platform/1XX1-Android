@@ -49,21 +49,24 @@ export class GossipDiscovery {
   private readonly _identity:  NodeIdentity;
   private readonly _endpoint:  string;
   private readonly _getTerm:   () => number;
-  private readonly _onNewPeer: (nodeId: string, endpoint: string) => void;
+  private readonly _onNewPeer:  (nodeId: string, endpoint: string) => void;
+  private readonly _onPeerDead: (nodeId: string) => void = () => {};
   private readonly _logger:    { info: (m: string) => void; warn: (m: string) => void; debug: (m: string) => void } | undefined;
 
   constructor(
-    identity:  NodeIdentity,
-    endpoint:  string,
-    getTerm:   () => number,
-    onNewPeer: (nodeId: string, endpoint: string) => void = () => {},
-    logger?:   { info: (m: string) => void; warn: (m: string) => void; debug: (m: string) => void }
+    identity:    NodeIdentity,
+    endpoint:    string,
+    getTerm:     () => number,
+    onNewPeer:   (nodeId: string, endpoint: string) => void = () => {},
+    logger?:     { info: (m: string) => void; warn: (m: string) => void; debug: (m: string) => void },
+    onPeerDead?: (nodeId: string) => void
   ) {
-    this._identity  = identity;
-    this._endpoint  = endpoint;
-    this._getTerm   = getTerm;
-    this._onNewPeer = onNewPeer;
-    this._logger    = logger;
+    this._identity    = identity;
+    this._endpoint    = endpoint;
+    this._getTerm     = getTerm;
+    this._onNewPeer   = onNewPeer;
+    this._logger      = logger;
+    this._onPeerDead  = onPeerDead ?? (() => {});
   }
 
   // ─── Baslatma ────────────────────────────────────────────────────────────
@@ -249,6 +252,7 @@ export class GossipDiscovery {
         if (peer.reputation <= 0) {
           this._peers.remove(peer.nodeId);
           this._logger?.warn(`Peer silindi (dead): ${peer.nodeId.slice(0,12)}`);
+          this._onPeerDead(peer.nodeId);
         } else {
           this._peers.markDead(peer.nodeId);
         }
