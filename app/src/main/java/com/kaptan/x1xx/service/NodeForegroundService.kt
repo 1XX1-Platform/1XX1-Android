@@ -9,6 +9,7 @@ import com.kaptan.x1xx.R
 import com.kaptan.x1xx.bridge.NodeBridge
 import com.kaptan.x1xx.runtime.NodeRuntimeLauncher
 import com.kaptan.x1xx.transport.NetworkWatcher
+import com.kaptan.x1xx.transport.WifiDirectTransport
 import com.kaptan.x1xx.ui.MainActivity
 
 class NodeForegroundService : Service() {
@@ -22,6 +23,7 @@ class NodeForegroundService : Service() {
 
     private var launcher: NodeRuntimeLauncher? = null
     private var netWatcher: NetworkWatcher? = null
+    private var wifiDirect: WifiDirectTransport? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -59,6 +61,7 @@ class NodeForegroundService : Service() {
                 bridge.log("[SERVICE] Node hazir: localhost:$port")
 			bridge.setRunning(port)
                 if (netWatcher == null) { netWatcher = NetworkWatcher(applicationContext).also { it.start() } }
+                if (wifiDirect == null) { wifiDirect = WifiDirectTransport(applicationContext).also { it.start() } }
                 updateNotification("Aktif — localhost:$port")
             },
             onError = { err ->
@@ -70,6 +73,7 @@ class NodeForegroundService : Service() {
 
     private fun stopRuntime() {
         netWatcher?.stop(); netWatcher = null
+        wifiDirect?.stop(); wifiDirect = null
         launcher?.stop()
         launcher = null
         NodeBridge.instance.setStopped()
