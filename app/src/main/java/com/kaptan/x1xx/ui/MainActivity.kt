@@ -1,6 +1,10 @@
 package com.kaptan.x1xx.ui
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.Manifest
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -61,7 +65,7 @@ class MainActivity : AppCompatActivity() {
             ).apply()
         }
 
-        btnStart.setOnClickListener   { startNode() }
+        btnStart.setOnClickListener   { checkPermissionsAndStart() }
         btnStop.setOnClickListener    { stopNode() }
         btnBrowser.setOnClickListener { openBrowser() }
         btnBrowser.isEnabled = false
@@ -84,6 +88,30 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun checkPermissionsAndStart() {
+        val perms = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            perms.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES)
+                != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            }
+        }
+        if (perms.isEmpty()) {
+            startNode()
+        } else {
+            ActivityCompat.requestPermissions(this, perms.toTypedArray(), 1001)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) startNode()
     }
 
     private fun startNode() {
