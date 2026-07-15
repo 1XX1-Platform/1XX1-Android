@@ -569,7 +569,10 @@ setInterval(refresh, 3000);
         if (gip) sweptPeers.delete(gip);
       }
     }
-    for (const id of ids) gossip.removePeer(id);
+    for (const id of ids) {
+      gossip.removePeer(id);
+      _knownPeers.delete(id);
+    }
     log.warn(`Peer ayrildi (goodbye): ${ids[0].slice(0,12)}`);
     json({ ok: true });
     return;
