@@ -67,9 +67,8 @@ class WifiDirectTransport(private val context: Context) {
                 NodeBridge.instance.log("[P2P] Peer arama basladi")
             }
             override fun onFailure(reason: Int) {
-                // Hata 2 = BUSY (zaten arıyor), sessiz geç
-                if (reason != 2) NodeBridge.instance.log("[P2P] Peer arama hatasi: $reason")
-                scope.launch { delay(30_000); discoverPeers() }
+                // Sessiz retry - log'a yansıma
+                scope.launch { delay(60_000); discoverPeers() }
             }
         })
     }
