@@ -145,7 +145,15 @@ class WifiDirectTransport(private val context: Context) {
                         NodeBridge.instance.log("[P2P] ${peers.size} cihaz bulundu")
                         peers.forEach { device ->
                             NodeBridge.instance.log("[P2P] Cihaz: ${device.deviceName} - ${device.deviceAddress}")
-                            connectToPeer(device)
+                            // MAC karsilastirma - kucuk olan baglanir, buyuk olan bekler
+                            val myMac = android.provider.Settings.Secure.getString(
+                                context.contentResolver, "bluetooth_address"
+                            ) ?: "00:00:00:00:00:00"
+                            if (myMac < device.deviceAddress) {
+                                connectToPeer(device)
+                            } else {
+                                NodeBridge.instance.log("[P2P] Baglanti bekleniyor: ${device.deviceName}")
+                            }
                         }
                     }
                 }
