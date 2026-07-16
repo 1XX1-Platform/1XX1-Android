@@ -67,8 +67,8 @@ class WifiDirectTransport(private val context: Context) {
                 NodeBridge.instance.log("[P2P] Peer arama basladi")
             }
             override fun onFailure(reason: Int) {
-                NodeBridge.instance.log("[P2P] Peer arama hatasi: $reason")
-                // 30 saniye sonra tekrar dene
+                // Hata 2 = BUSY (zaten arıyor), sessiz geç
+                if (reason != 2) NodeBridge.instance.log("[P2P] Peer arama hatasi: $reason")
                 scope.launch { delay(30_000); discoverPeers() }
             }
         })
@@ -98,13 +98,12 @@ class WifiDirectTransport(private val context: Context) {
 
             NodeBridge.instance.log("[P2P] Grup olustu - GO: $ip - Ben GO mu: $isOwner")
 
-            // Node.js'e peer olarak bildir
-            if (!isOwner) {
-                // Biz istemciyiz, GO'ya baglan
-                scope.launch {
-                    delay(1000) // GO'nun hazir olmasi icin bekle
-                    notifyNodeJS(ip)
-                }
+            // Her iki taraf da Node.js'e bildir
+            // GO ise karşı taraf bize bağlanır, biz de kendi IP'mizi bildiririz
+            // Client ise GO'nun IP'sine bağlanırız
+            scope.launch {
+                delay(2000)
+                notifyNodeJS(ip)
             }
         }
     }
@@ -164,9 +163,7 @@ class WifiDirectTransport(private val context: Context) {
                     if (networkInfo?.isConnected == true) {
                         requestConnectionInfo()
                     } else {
-                        NodeBridge.instance.log("[P2P] Baglanti koptu")
-                        // Yeniden ara
-                        scope.launch { delay(5_000); discoverPeers() }
+                            scope.launch { delay(5_000); discoverPeers() }
                     }
                 }
                 WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
