@@ -140,8 +140,8 @@ class WifiDirectTransport(private val context: Context) {
                     manager?.requestPeers(channel) { peerList ->
                         val peers = peerList.deviceList
                         peers.forEach { device ->
+                            // Sadece bilinen 1XX1 cihazlarına bağlan veya dene
                             if (!connectedDevices.contains(device.deviceAddress)) {
-                                NodeBridge.instance.log("[P2P] Cihaz bulundu: ${device.deviceName}")
                                 connectToPeer(device)
                             }
                         }
