@@ -618,6 +618,20 @@ setInterval(refresh, 3000);
     return;
   }
 
+  // ── /admin/p2p-lost — WiFi Direct baglantisi koptu ──────────────────────
+  if (u.pathname === "/admin/p2p-lost" && req.method === "POST") {
+    // 192.168.49.x subnet'indeki tüm peer'ları dead say
+    for (const peer of gossip.alivePeers()) {
+      if (peer.endpoint?.includes("192.168.49.")) {
+        gossip.removePeer(peer.nodeId);
+        _knownPeers.delete(peer.nodeId);
+        log.info(`[P2P] Baglanti koptu, peer silindi: ${peer.nodeId.slice(0,16)}`);
+      }
+    }
+    json({ ok: true });
+    return;
+  }
+
   // ── /admin/reconnect-peers ────────────────────────────────────────────────
   if (u.pathname === "/admin/reconnect-peers" && req.method === "POST") {
     for (const peer of CFG.peers) node.addPeer(peer, "mock_key");

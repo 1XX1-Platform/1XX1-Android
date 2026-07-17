@@ -155,7 +155,22 @@ class WifiDirectTransport(private val context: Context) {
                         requestConnectionInfo()
                     } else {
                         connectedDevices.clear()
-                    scope.launch { delay(10_000); discoverPeers() }
+                    // Baglanti koptu - Node.js'e bildir
+                    scope.launch {
+                        try {
+                            val port = NodeBridge.instance.getStatus().port
+                            val client = okhttp3.OkHttpClient.Builder()
+                                .connectTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+                                .build()
+                            val req = okhttp3.Request.Builder()
+                                .url("http://localhost:$port/admin/p2p-lost")
+                                .post(okhttp3.RequestBody.create(null, ByteArray(0)))
+                                .build()
+                            client.newCall(req).execute().close()
+                        } catch (_: Exception) {}
+                        delay(10_000)
+                        discoverPeers()
+                    }
                     }
                 }
                 WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> { /* sessiz */ }
