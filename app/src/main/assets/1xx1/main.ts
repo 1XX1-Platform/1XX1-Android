@@ -605,13 +605,13 @@ setInterval(refresh, 3000);
         const r = await fetch(`${endpoint}/health`, { signal: AbortSignal.timeout(3000) });
         const h = await r.json() as { nodeId?: string };
         const realId = h.nodeId ?? ip;
+        // Kendimizi ve loopback'i ekleme
+        if (realId === CFG.nodeId || ip === "127.0.0.1") return;
         gossip.addPeer(realId, endpoint, "lan");
-        _knownPeers.delete(realId); // yeniden bağlanma logu için
+        _knownPeers.delete(realId);
         log.info(`Android discovery peer eklendi: ${realId.slice(0,16)} @ ${endpoint}`);
       } catch {
-        // health alınamazsa IP ile kaydet, gossip sonra düzeltir
-        gossip.addPeer(ip, endpoint, "lan");
-        log.info(`Android discovery peer eklendi (IP): ${endpoint}`);
+        // health alınamazsa 1XX1 değil - sessiz geç
       }
     })();
     json({ ok: true, peer: endpoint });
