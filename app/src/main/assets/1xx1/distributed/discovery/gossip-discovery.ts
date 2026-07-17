@@ -117,7 +117,7 @@ export class GossipDiscovery {
     updateLogicalTime(req.logicalTime);
 
     // Gelen node'u kaydet (kendimiz değilsek)
-    if (req.nodeId !== this._identity.nodeId) {
+    if (req.nodeId !== this._identity.nodeId && !req.endpoint?.includes("127.0.0.1")) {
       this._peers.upsert({
         nodeId:    req.nodeId,
         endpoint:  req.endpoint,
