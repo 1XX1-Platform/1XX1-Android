@@ -83,7 +83,7 @@ class WifiDirectTransport(private val context: Context) {
         mgr.connect(ch, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 connectedDevices.add(device.deviceAddress)
-                NodeBridge.instance.log("[P2P] Baglandi: ${device.deviceName}")
+                // Log sadece Node.js'den kimlik doğrulandıktan sonra yazılır
             }
             override fun onFailure(reason: Int) {
                 if (reason != 2) NodeBridge.instance.log("[P2P] Baglanti hatasi: $reason")
