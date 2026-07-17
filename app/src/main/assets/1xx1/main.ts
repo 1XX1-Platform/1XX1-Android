@@ -599,9 +599,21 @@ setInterval(refresh, 3000);
       return;
     }
     const endpoint = `http://${ip}:${CFG.uiPort}`;
-    gossip.addPeer(ip, endpoint, "android-discovery");
-    node.addPeer(ip, "mock_key");
-    log.info(`Android discovery peer eklendi: ${endpoint}`);
+    // Önce /health ile gerçek nodeId'yi öğren
+    (async () => {
+      try {
+        const r = await fetch(`${endpoint}/health`, { signal: AbortSignal.timeout(3000) });
+        const h = await r.json() as { nodeId?: string };
+        const realId = h.nodeId ?? ip;
+        gossip.addPeer(realId, endpoint, "lan");
+        _knownPeers.delete(realId); // yeniden bağlanma logu için
+        log.info(`Android discovery peer eklendi: ${realId.slice(0,16)} @ ${endpoint}`);
+      } catch {
+        // health alınamazsa IP ile kaydet, gossip sonra düzeltir
+        gossip.addPeer(ip, endpoint, "lan");
+        log.info(`Android discovery peer eklendi (IP): ${endpoint}`);
+      }
+    })();
     json({ ok: true, peer: endpoint });
     return;
   }
