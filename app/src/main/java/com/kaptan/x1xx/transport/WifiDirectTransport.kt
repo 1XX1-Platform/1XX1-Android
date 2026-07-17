@@ -62,6 +62,7 @@ class WifiDirectTransport(private val context: Context) {
 
     fun discoverPeers() {
         if (!isRunning) return
+        scope.launch(Dispatchers.Main) {
         manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 NodeBridge.instance.log("[P2P] Peer arama basladi")
@@ -71,6 +72,7 @@ class WifiDirectTransport(private val context: Context) {
                 scope.launch { delay(60_000); discoverPeers() }
             }
         })
+        } // scope.launch sonu
     }
 
     fun connectToPeer(device: WifiP2pDevice) {
@@ -166,10 +168,7 @@ class WifiDirectTransport(private val context: Context) {
                     }
                 }
                 WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
-                    val device = intent.getParcelableExtra<WifiP2pDevice>(
-                        WifiP2pManager.EXTRA_WIFI_P2P_DEVICE
-                    )
-                    NodeBridge.instance.log("[P2P] Bu cihaz: ${device?.deviceName}")
+                    // Sessiz - log spam önleme
                 }
             }
         }
