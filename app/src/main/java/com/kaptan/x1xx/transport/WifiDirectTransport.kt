@@ -18,6 +18,7 @@ class WifiDirectTransport(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handlerThread = HandlerThread("WifiDirectHandler")
     private var isRunning = false
+    private val connectedDevices = mutableSetOf<String>()
 
     companion object {
         val intentFilter = IntentFilter().apply {
@@ -81,7 +82,8 @@ class WifiDirectTransport(private val context: Context) {
         }
         mgr.connect(ch, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                NodeBridge.instance.log("[P2P] Baglanti istegi: ${device.deviceName}")
+                connectedDevices.add(device.deviceAddress)
+                NodeBridge.instance.log("[P2P] Baglandi: ${device.deviceName}")
             }
             override fun onFailure(reason: Int) {
                 if (reason != 2) NodeBridge.instance.log("[P2P] Baglanti hatasi: $reason")
@@ -137,10 +139,9 @@ class WifiDirectTransport(private val context: Context) {
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     manager?.requestPeers(channel) { peerList ->
                         val peers = peerList.deviceList
-                        if (peers.isNotEmpty()) {
-                            NodeBridge.instance.log("[P2P] ${peers.size} cihaz bulundu")
-                            peers.forEach { device ->
-                                NodeBridge.instance.log("[P2P] Cihaz: ${device.deviceName}")
+                        peers.forEach { device ->
+                            if (!connectedDevices.contains(device.deviceAddress)) {
+                                NodeBridge.instance.log("[P2P] Cihaz bulundu: ${device.deviceName}")
                                 connectToPeer(device)
                             }
                         }
@@ -153,7 +154,8 @@ class WifiDirectTransport(private val context: Context) {
                     if (networkInfo?.isConnected == true) {
                         requestConnectionInfo()
                     } else {
-                        scope.launch { delay(10_000); discoverPeers() }
+                        connectedDevices.clear()
+                    scope.launch { delay(10_000); discoverPeers() }
                     }
                 }
                 WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> { /* sessiz */ }
