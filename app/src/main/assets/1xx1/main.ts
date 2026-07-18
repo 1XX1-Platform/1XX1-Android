@@ -599,17 +599,17 @@ setInterval(refresh, 3000);
       return;
     }
     const endpoint = `http://${ip}:${CFG.uiPort}`;
+    // IP'yi hemen sweptPeers'a ekle - subnet sweep tekrar bakmasın
+    sweptPeers.set(ip, Date.now() + 86_400_000); // 24 saat - WiFi Direct IP kalıcı
     // Önce /health ile gerçek nodeId'yi öğren
     (async () => {
       try {
         const r = await fetch(`${endpoint}/health`, { signal: AbortSignal.timeout(3000) });
         const h = await r.json() as { nodeId?: string };
         const realId = h.nodeId ?? ip;
-        // Kendimizi ve loopback'i ekleme
         if (realId === CFG.nodeId || ip === "127.0.0.1") return;
         gossip.addPeer(realId, endpoint, "lan");
         _knownPeers.delete(realId);
-        sweptPeers.set(ip, Date.now()); // bir daha subnet taramasında bakma
         log.info(`Android discovery peer eklendi: ${realId.slice(0,16)} @ ${endpoint}`);
       } catch {
         // health alınamazsa 1XX1 değil - sessiz geç
