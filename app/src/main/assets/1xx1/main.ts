@@ -674,20 +674,20 @@ async function probeHost(ip: string): Promise<void> {
     const canonicalId = h.identity ?? h.nodeId;
     if (!canonicalId || canonicalId === IDENTITY.nodeId || canonicalId === CFG.nodeId) return;
     if (Date.now() - (sweptPeers.get(ip) ?? 0) < SWEEP_TTL) return;
+    // Zaten bilinen peer ise tekrar ekleme
+    if (gossip.peers().has(canonicalId)) return;
     sweptPeers.set(ip, Date.now());
     const endpoint = `http://${ip}:${CFG.uiPort}`;
     gossip.addPeer(canonicalId, endpoint, "subnet-sweep");
     node.addPeer(ip, "mock_key");
-    if (!gossip.peersAlive().some((pr) => pr.nodeId === canonicalId)) {
-      log.info(`Subnet taramasi peer buldu: ${canonicalId} @ ${endpoint}`);
-    }
+    log.info(`Subnet taramasi peer buldu: ${canonicalId.slice(0,16)} @ ${endpoint}`);
   } catch { /* cevap yok — normal */ }
 }
 
 async function sweepOnce(): Promise<void> {
   const self = lanHintIP ?? getLocalIP();
-  if (!self || self === "127.0.0.1" || self === "0.0.0.0") return;
-  if (self.startsWith("127.")) return; // loopback subnet tarama
+  if (!self || self === "127.0.0.1" || self === "0.0.0.0" || self.startsWith("127.")) return;
+  log.info(`Subnet taramasi: ${self}/24`);
   const base = self.split(".").slice(0, 3).join(".");
   const targets: string[] = [];
   for (let i = 1; i <= 254; i++) {
@@ -701,11 +701,7 @@ async function sweepOnce(): Promise<void> {
 }
 
 function startSubnetSweep(): void {
-  // Ilk tarama 3sn sonra (server ayaga kalksin), sonra her 45sn'de bir
-  setTimeout(() => {
-    log.info(`Subnet taramasi basladi: ${lanHintIP ?? getLocalIP()}/24 @ port ${CFG.uiPort}`);
-    void sweepOnce();
-  }, 3000);
+  setTimeout(() => { void sweepOnce(); }, 3000);
   setInterval(() => { void sweepOnce(); }, 45_000);
 }
 
