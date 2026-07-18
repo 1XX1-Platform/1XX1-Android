@@ -104,6 +104,10 @@ export class GossipDiscovery {
   // ─── Manuel Peer Ekle (LAN discovery'den gelir) ──────────────────────────
 
   addPeer(nodeId: string, endpoint: string, source: "lan" | "gossip" | "manual" = "manual"): void {
+    if (nodeId === this._identity.nodeId) return; // kendini ekleme
+    // Ayni endpoint farkli nodeId ile gelirse ekleme (cift sayim onleme)
+    const existing = this._peers.all().find(p => p.endpoint === endpoint && p.nodeId !== nodeId);
+    if (existing) return;
     this._peers.upsert({
       nodeId, endpoint, lastSeen: Date.now(),
       term: this._getTerm(), source,
