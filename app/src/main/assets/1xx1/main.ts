@@ -609,6 +609,7 @@ setInterval(refresh, 3000);
         if (realId === CFG.nodeId || ip === "127.0.0.1") return;
         gossip.addPeer(realId, endpoint, "lan");
         _knownPeers.delete(realId);
+        sweptPeers.set(ip, Date.now()); // bir daha subnet taramasında bakma
         log.info(`Android discovery peer eklendi: ${realId.slice(0,16)} @ ${endpoint}`);
       } catch {
         // health alınamazsa 1XX1 değil - sessiz geç
