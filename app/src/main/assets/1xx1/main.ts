@@ -687,6 +687,7 @@ async function probeHost(ip: string): Promise<void> {
 async function sweepOnce(): Promise<void> {
   const self = lanHintIP ?? getLocalIP();
   if (!self || self === "127.0.0.1" || self === "0.0.0.0") return;
+  if (self.startsWith("127.")) return; // loopback subnet tarama
   const base = self.split(".").slice(0, 3).join(".");
   const targets: string[] = [];
   for (let i = 1; i <= 254; i++) {
