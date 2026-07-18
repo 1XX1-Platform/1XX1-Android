@@ -19,7 +19,7 @@ export interface PeerRecord {
   source:     "seed" | "gossip" | "manual" | "lan";
 }
 
-const DEAD_THRESHOLD_MS   = 90_000;   // 90 saniye gormezse oldu
+const DEAD_THRESHOLD_MS   = 180_000;  // 3 dakika gormezse oldu
 const MAX_PEERS           = 256;
 
 export class PeerTable {

@@ -663,7 +663,7 @@ let observer: ClusterObserver;
 
 let lanHintIP: string | null = null;
 const sweptPeers = new Map<string, number>();
-const SWEEP_TTL = 120_000; // 2 dk sonra yeniden duyur - resurrection kapisi
+const SWEEP_TTL = 300_000; // 5 dk sonra yeniden duyur - resurrection kapisi
 
 async function probeHost(ip: string): Promise<void> {
   try {
