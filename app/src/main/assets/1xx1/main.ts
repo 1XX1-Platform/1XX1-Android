@@ -608,6 +608,7 @@ setInterval(refresh, 3000);
         const h = await r.json() as { nodeId?: string };
         const realId = h.nodeId ?? ip;
         if (realId === CFG.nodeId || ip === "127.0.0.1") return;
+        if (realId === CFG.nodeId) return;
         gossip.addPeer(realId, endpoint, "lan");
         _knownPeers.delete(realId);
         log.info(`Android discovery peer eklendi: ${realId.slice(0,16)} @ ${endpoint}`);
@@ -679,6 +680,7 @@ async function probeHost(ip: string): Promise<void> {
     if (gossip.peers().has(canonicalId)) return;
     sweptPeers.set(ip, Date.now());
     const endpoint = `http://${ip}:${CFG.uiPort}`;
+    if (canonicalId === CFG.nodeId) return;
     gossip.addPeer(canonicalId, endpoint, "subnet-sweep");
     node.addPeer(ip, "mock_key");
     log.info(`Subnet taramasi peer buldu: ${canonicalId.slice(0,16)} @ ${endpoint}`);
