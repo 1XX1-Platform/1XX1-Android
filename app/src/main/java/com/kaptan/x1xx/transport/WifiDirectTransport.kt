@@ -64,7 +64,7 @@ class WifiDirectTransport(private val context: Context) {
         val ch = channel ?: return
         mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                NodeBridge.instance.log("[P2P] Tarama basladi")
+                // Tarama sessizce devam ediyor
             }
             override fun onFailure(reason: Int) {
                 // Sessiz retry

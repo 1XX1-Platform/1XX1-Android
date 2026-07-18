@@ -149,7 +149,7 @@ export class GossipDiscovery {
 
   peers(): PeerTable { return this._peers; }
   alivePeers() { return this._peers.alive(); }
-  peerCount() { return this._peers.alive().length; }
+  peerCount() { return this._peers.alive().filter(p => p.nodeId !== this._identity.nodeId).length; }
 
   // ─── /gossip/peers handler ────────────────────────────────────────────────
 
