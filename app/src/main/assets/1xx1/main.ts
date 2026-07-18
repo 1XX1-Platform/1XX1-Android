@@ -688,8 +688,6 @@ async function probeHost(ip: string): Promise<void> {
 async function sweepOnce(): Promise<void> {
   const self = lanHintIP ?? getLocalIP();
   if (!self || self === "127.0.0.1" || self === "0.0.0.0" || self.startsWith("127.")) return;
-  // WiFi Direct subnet'ini tarama - gossip zaten halleder
-  if (self.startsWith("192.168.49.")) return;
   const base = self.split(".").slice(0, 3).join(".");
   const targets: string[] = [];
   for (let i = 1; i <= 254; i++) {
