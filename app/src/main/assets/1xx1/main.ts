@@ -792,9 +792,9 @@ async function bootstrap() {
     // Mesh'ten gelen peer'ları Gossip sistemine otomatik ekle
     ghostTransport.onMessage(async (env, from) => {
       if (from !== CFG.nodeId) bus.emit("peer:update" as never, { id: from, status: "active" });
-      // LAN'da kesfedilen peer'i gossip'e ekle
+      // LAN'da kesfedilen peer'i gossip'e ekle - 192.168.49.x (WiFi Direct) haric
       const lanIp = from.includes(":") ? from.split(":")[0] : from;
-      if (lanIp && lanIp !== "0.0.0.0" && lanIp !== "127.0.0.1") {
+      if (lanIp && lanIp !== "0.0.0.0" && lanIp !== "127.0.0.1" && !lanIp.startsWith("192.168.49.")) {
         gossip.addPeer(from, `http://${lanIp}:${CFG.uiPort}`, "lan");
       }
     });
