@@ -91,12 +91,19 @@ class WifiDirectTransport(private val context: Context) {
         })
     }
 
+    private var lastGroupIp: String? = null
+
     private fun requestConnectionInfo() {
         val mgr = manager ?: return
         val ch = channel ?: return
         mgr.requestConnectionInfo(ch) { info ->
-            if (info == null || !info.groupFormed) return@requestConnectionInfo
+            if (info == null || !info.groupFormed) {
+                lastGroupIp = null
+                return@requestConnectionInfo
+            }
             val ip = info.groupOwnerAddress?.hostAddress ?: return@requestConnectionInfo
+            if (ip == lastGroupIp) return@requestConnectionInfo
+            lastGroupIp = ip
             val isOwner = info.isGroupOwner
             NodeBridge.instance.log("[P2P] Grup kuruldu - GO: $ip - Ben GO: $isOwner")
             scope.launch {
