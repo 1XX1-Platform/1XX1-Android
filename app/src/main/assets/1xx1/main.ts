@@ -688,6 +688,7 @@ async function probeHost(ip: string): Promise<void> {
 async function sweepOnce(): Promise<void> {
   const self = lanHintIP ?? getLocalIP();
   if (!self || self === "127.0.0.1" || self === "0.0.0.0" || self.startsWith("127.")) return;
+  // Sessiz tarama - log'a yansımaz
   const base = self.split(".").slice(0, 3).join(".");
   const targets: string[] = [];
   for (let i = 1; i <= 254; i++) {
@@ -701,6 +702,7 @@ async function sweepOnce(): Promise<void> {
 }
 
 function startSubnetSweep(): void {
+  log.info("[NET] Arka plan tarama aktif");
   setTimeout(() => { void sweepOnce(); }, 3000);
   setInterval(() => { void sweepOnce(); }, 45_000);
 }
