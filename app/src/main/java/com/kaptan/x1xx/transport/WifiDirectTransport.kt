@@ -41,8 +41,12 @@ class WifiDirectTransport(private val context: Context) {
                 context.registerReceiver(receiver, intentFilter)
                 isRunning = true
                 NodeBridge.instance.log("[P2P] WiFi Direct baslatildi")
-                // 2 saniye bekle sonra tara
-                scope.launch { delay(2000); discoverPeers() }
+                // Once eski grubu temizle, sonra tara
+                scope.launch {
+                    try { manager?.removeGroup(channel, null) } catch (_: Exception) {}
+                    delay(2000)
+                    discoverPeers()
+                }
             } catch (e: Exception) {
                 NodeBridge.instance.log("[P2P] Baslama hatasi: ${e.message}")
             }
@@ -101,7 +105,11 @@ class WifiDirectTransport(private val context: Context) {
         val ch = channel ?: return
         mgr.requestConnectionInfo(ch) { info ->
             if (info == null || !info.groupFormed) {
-                lastGroupIp = null
+                if (lastGroupIp != null) {
+                    lastGroupIp = null
+                    // Baglanti koptu - yeniden tara
+                    scope.launch { delay(3000); discoverPeers() }
+                }
                 return@requestConnectionInfo
             }
             val ip = info.groupOwnerAddress?.hostAddress ?: return@requestConnectionInfo
