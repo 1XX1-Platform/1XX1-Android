@@ -23,6 +23,7 @@ class WifiDirectTransport(private val context: Context) {
     companion object {
         val intentFilter = IntentFilter().apply {
             addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+            addAction(android.location.LocationManager.PROVIDERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
@@ -146,10 +147,29 @@ class WifiDirectTransport(private val context: Context) {
     inner class WifiDirectReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
+                android.location.LocationManager.PROVIDERS_CHANGED_ACTION -> {
+                    val lm = context.getSystemService(Context.LOCATION_SERVICE)
+                        as android.location.LocationManager
+                    val locationOn = lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+                        || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+                    if (locationOn && isRunning) {
+                        // Konum acildi - yeniden tara
+                        lastGroupIp = null
+                        connectedDevices.clear()
+                        scope.launch { delay(1000); discoverPeers() }
+                    }
+                }
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                     val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-                    if (state != WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                        NodeBridge.instance.log("[P2P] WiFi Direct kapali")
+                    if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                        // WiFi Direct acildi - yeniden tara
+                        lastGroupIp = null
+                        connectedDevices.clear()
+                        scope.launch { delay(1000); discoverPeers() }
+                    } else {
+                        // WiFi Direct kapandi - temizle
+                        lastGroupIp = null
+                        connectedDevices.clear()
                     }
                 }
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
