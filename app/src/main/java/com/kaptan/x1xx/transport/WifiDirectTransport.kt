@@ -65,7 +65,6 @@ class WifiDirectTransport(private val context: Context) {
 
     private fun discoverPeers() {
         if (!isRunning) return
-        if (lastGroupIp != null) return // Aktif baglanti varsa discovery baslatma
         val mgr = manager ?: return
         val ch = channel ?: return
         mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
@@ -73,10 +72,7 @@ class WifiDirectTransport(private val context: Context) {
                 // Tarama sessizce devam ediyor
             }
             override fun onFailure(reason: Int) {
-                // Baglanti yoksa 60sn sonra tekrar dene
-                if (lastGroupIp == null) {
-                    scope.launch { delay(60_000); discoverPeers() }
-                }
+                scope.launch { delay(30_000); discoverPeers() }
             }
         })
     }
