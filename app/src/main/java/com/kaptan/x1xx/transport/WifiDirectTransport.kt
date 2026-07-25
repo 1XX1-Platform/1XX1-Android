@@ -15,7 +15,7 @@ class WifiDirectTransport(private val context: Context) {
     private var manager: WifiP2pManager? = null
     private var channel: WifiP2pManager.Channel? = null
     private var receiver: BroadcastReceiver? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handlerThread = HandlerThread("WifiDirectHandler")
     private var isRunning = false
     private val connectedDevices = mutableSetOf<String>()
@@ -60,6 +60,7 @@ class WifiDirectTransport(private val context: Context) {
         try { manager?.removeGroup(channel, null) } catch (_: Exception) {}
         try { handlerThread.quitSafely() } catch (_: Exception) {}
         scope.cancel()
+        scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         isRunning = false
     }
 
