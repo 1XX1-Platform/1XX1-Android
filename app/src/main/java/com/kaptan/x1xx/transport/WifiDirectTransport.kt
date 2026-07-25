@@ -71,10 +71,11 @@ class WifiDirectTransport(private val context: Context) {
         val ch = channel ?: return
         mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                // 20 saniye sonra tekrar tara - surekli aktif tut
+                NodeBridge.instance.log("[P2P] Tarama baslatildi")
                 scope.launch { delay(20_000); discoverPeers() }
             }
             override fun onFailure(reason: Int) {
+                NodeBridge.instance.log("[P2P] Tarama hatasi: $reason")
                 scope.launch { delay(10_000); discoverPeers() }
             }
         })
