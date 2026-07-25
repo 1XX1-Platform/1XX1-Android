@@ -67,16 +67,23 @@ class WifiDirectTransport(private val context: Context) {
 
     private fun discoverPeers() {
         if (!isRunning) return
+        if (isDiscovering) return
         val mgr = manager ?: return
         val ch = channel ?: return
+        isDiscovering = true
         mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                NodeBridge.instance.log("[P2P] Tarama baslatildi")
-                scope.launch { delay(20_000); discoverPeers() }
+                // Tarama aktif - 30sn sonra yenile
+                scope.launch { delay(30_000); isDiscovering = false; discoverPeers() }
             }
             override fun onFailure(reason: Int) {
-                NodeBridge.instance.log("[P2P] Tarama hatasi: $reason")
-                scope.launch { delay(10_000); discoverPeers() }
+                isDiscovering = false
+                if (reason == 2) {
+                    // ALREADY_CONNECTING - bekle
+                    scope.launch { delay(5_000); discoverPeers() }
+                } else {
+                    scope.launch { delay(15_000); discoverPeers() }
+                }
             }
         })
     }
@@ -100,6 +107,7 @@ class WifiDirectTransport(private val context: Context) {
     }
 
     private var lastGroupIp: String? = null
+    private var isDiscovering = false
 
     private fun requestConnectionInfo() {
         val mgr = manager ?: return
