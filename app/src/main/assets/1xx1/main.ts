@@ -82,7 +82,7 @@ const metrics  = createPlatformRegistry();
 // FAZ 1: Gossip Discovery
 const _knownPeers = new Set<string>(); // log spam önleme
 const gossip = new GossipDiscovery(
-  IDENTITY,
+  { ...IDENTITY, nodeId: CFG.nodeId },
   normalizeEndpoint("0.0.0.0", CFG.uiPort),  // asla 0.0.0.0 saklanmaz
   () => 3,   // getTerm — Raft entegrasyonunda gercek term gelecek
   (nodeId, endpoint) => {
