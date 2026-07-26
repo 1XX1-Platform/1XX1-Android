@@ -186,9 +186,15 @@ class WifiDirectTransport(private val context: Context) {
                     manager?.requestPeers(channel) { peerList ->
                         val peers = peerList.deviceList
                         peers.forEach { device ->
-                            // Sadece bilinen 1XX1 cihazlarına bağlan veya dene
                             if (!connectedDevices.contains(device.deviceAddress)) {
-                                connectToPeer(device)
+                                // MAC karsilastirma - kucuk olan baglanir, buyuk olan bekler
+                                val myMac = android.provider.Settings.Secure.getString(
+                                    context.contentResolver, "bluetooth_address"
+                                ) ?: "00:00:00:00:00:00"
+                                if (myMac < device.deviceAddress) {
+                                    connectToPeer(device)
+                                }
+                                // Buyuk MAC bekler - karsi taraf baglanacak
                             }
                         }
                     }
