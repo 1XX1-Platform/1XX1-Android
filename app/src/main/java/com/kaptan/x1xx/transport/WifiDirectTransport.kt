@@ -11,6 +11,29 @@ import com.kaptan.x1xx.bridge.NodeBridge
 import kotlinx.coroutines.*
 
 class WifiDirectTransport(private val context: Context) {
+    /*
+     * KRİTİK KARARLAR - Gerekçesiz değiştirme:
+     *
+     * 1. MAC karsilastirmasi (WIFI_P2P_PEERS_CHANGED_ACTION icinde):
+     *    Kucuk MAC baglanir, buyuk MAC bekler.
+     *    Sebep: Iki cihaz ayni anda connect yapinca ALREADY_CONNECTING hatasi.
+     *
+     * 2. lastGroupIp deduplication (requestConnectionInfo icinde):
+     *    Ayni grup IP si ikinci kez gelirse islem yapma.
+     *    Sebep: WIFI_P2P_CONNECTION_CHANGED_ACTION birden fazla tetikleniyor.
+     *
+     * 3. isDiscovering flag (discoverPeers icinde):
+     *    Discovery devam ederken yenisini baslatma.
+     *    Sebep: Cakisan discovery ALREADY_CONNECTING hatasina yol aciyor.
+     *
+     * 4. scope yenileme (stop() icinde):
+     *    stop() sonrasi scope = CoroutineScope(...) ile yenile.
+     *    Sebep: Iptal edilen scope uzerinde launch calismiyor.
+     *
+     * 5. Baslangicta removeGroup (start() icinde):
+     *    Once eski grubu temizle, sonra discoverPeers cagir.
+     *    Sebep: Eski grup kalirsa yeni discovery calismaz.
+     */
 
     private var manager: WifiP2pManager? = null
     private var channel: WifiP2pManager.Channel? = null
