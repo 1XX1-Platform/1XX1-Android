@@ -1,0 +1,24 @@
+[33mcommit 24e7479766ce7b2455d8f70141fabbb851bbb088[m
+Author: 1XX1-Platform <KaptanCore@proton.me>
+Date:   Fri Jul 24 17:37:14 2026 +0200
+
+    fix: kalici node ID - Android ID bazli, cihaz adi degil
+
+[1mdiff --git a/app/src/main/java/com/kaptan/x1xx/runtime/NodeRuntimeLauncher.kt b/app/src/main/java/com/kaptan/x1xx/runtime/NodeRuntimeLauncher.kt[m
+[1mindex 13a3f47..c200f25 100644[m
+[1m--- a/app/src/main/java/com/kaptan/x1xx/runtime/NodeRuntimeLauncher.kt[m
+[1m+++ b/app/src/main/java/com/kaptan/x1xx/runtime/NodeRuntimeLauncher.kt[m
+[36m@@ -83,7 +83,12 @@[m [mclass NodeRuntimeLauncher([m
+             pb.directory(appDir)[m
+             pb.environment().apply {[m
+                 put("X1_UI_PORT",  PORT.toString())[m
+[31m-                put("X1_NODE_ID",  "android-${android.os.Build.MODEL.replace(" ", "-")}")[m
+[32m+[m[32m                // Kalici node kimlik - cihaz adina degil, Android ID'ye dayali[m
+[32m+[m[32m                val androidId = android.provider.Settings.Secure.getString([m
+[32m+[m[32m                    context.contentResolver,[m
+[32m+[m[32m                    android.provider.Settings.Secure.ANDROID_ID[m
+[32m+[m[32m                ) ?: android.os.Build.SERIAL[m
+[32m+[m[32m                put("X1_NODE_ID", "android-${androidId.takeLast(8)}")[m
+                 put("X1_NO_BROWSER", "true")[m
+                 put("HOME", context.filesDir.absolutePath)[m
+                 put("LD_LIBRARY_PATH", libDir.absolutePath)[m

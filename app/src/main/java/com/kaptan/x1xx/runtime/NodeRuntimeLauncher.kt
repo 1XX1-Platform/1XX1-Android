@@ -83,12 +83,16 @@ class NodeRuntimeLauncher(
             pb.directory(appDir)
             pb.environment().apply {
                 put("X1_UI_PORT",  PORT.toString())
-                // Kalici node kimlik - cihaz adina degil, Android ID'ye dayali
-                val androidId = android.provider.Settings.Secure.getString(
-                    context.contentResolver,
-                    android.provider.Settings.Secure.ANDROID_ID
-                ) ?: android.os.Build.SERIAL
-                put("X1_NODE_ID", "android-${androidId.takeLast(8)}")
+                // Kalici node kimlik - Android ID bazli, guvenli fallback
+                val androidId = try {
+                    android.provider.Settings.Secure.getString(
+                        context.contentResolver,
+                        android.provider.Settings.Secure.ANDROID_ID
+                    )?.takeLast(8) ?: android.os.Build.MODEL.replace(" ", "-")
+                } catch (e: Exception) {
+                    android.os.Build.MODEL.replace(" ", "-")
+                }
+                put("X1_NODE_ID", "android-${androidId}")
                 put("X1_NO_BROWSER", "true")
                 put("HOME", context.filesDir.absolutePath)
                 put("LD_LIBRARY_PATH", libDir.absolutePath)
