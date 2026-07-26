@@ -21,24 +21,12 @@ class WifiDirectTransport(private val context: Context) {
      * 2. lastGroupIp deduplication (requestConnectionInfo icinde):
      *    Ayni grup IP si ikinci kez gelirse islem yapma.
      *    Sebep: WIFI_P2P_CONNECTION_CHANGED_ACTION birden fazla tetikleniyor.
-     *
-     * 3. isDiscovering flag (discoverPeers icinde):
-     *    Discovery devam ederken yenisini baslatma.
-     *    Sebep: Cakisan discovery ALREADY_CONNECTING hatasina yol aciyor.
-     *
-     * 4. scope yenileme (stop() icinde):
-     *    stop() sonrasi scope = CoroutineScope(...) ile yenile.
-     *    Sebep: Iptal edilen scope uzerinde launch calismiyor.
-     *
-     * 5. Baslangicta removeGroup (start() icinde):
-     *    Once eski grubu temizle, sonra discoverPeers cagir.
-     *    Sebep: Eski grup kalirsa yeni discovery calismaz.
      */
 
     private var manager: WifiP2pManager? = null
     private var channel: WifiP2pManager.Channel? = null
     private var receiver: BroadcastReceiver? = null
-    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handlerThread = HandlerThread("WifiDirectHandler")
     private var isRunning = false
     private val connectedDevices = mutableSetOf<String>()
@@ -46,7 +34,6 @@ class WifiDirectTransport(private val context: Context) {
     companion object {
         val intentFilter = IntentFilter().apply {
             addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
-            addAction(android.location.LocationManager.PROVIDERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
@@ -64,15 +51,9 @@ class WifiDirectTransport(private val context: Context) {
                 receiver = WifiDirectReceiver()
                 context.registerReceiver(receiver, intentFilter)
                 isRunning = true
-                lastGroupIp = null
-                isDiscovering = false
                 NodeBridge.instance.log("[P2P] WiFi Direct baslatildi")
-                // Once eski grubu temizle, sonra tara
-                scope.launch {
-                    try { manager?.removeGroup(channel, null) } catch (_: Exception) {}
-                    delay(2000)
-                    discoverPeers()
-                }
+                // 2 saniye bekle sonra tara
+                scope.launch { delay(2000); discoverPeers() }
             } catch (e: Exception) {
                 NodeBridge.instance.log("[P2P] Baslama hatasi: ${e.message}")
             }
@@ -85,28 +66,22 @@ class WifiDirectTransport(private val context: Context) {
         try { manager?.removeGroup(channel, null) } catch (_: Exception) {}
         try { handlerThread.quitSafely() } catch (_: Exception) {}
         scope.cancel()
-        scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         isRunning = false
     }
 
     private fun discoverPeers() {
         if (!isRunning) return
-        if (isDiscovering) return
+        if (lastGroupIp != null) return // Aktif baglanti varsa discovery baslatma
         val mgr = manager ?: return
         val ch = channel ?: return
-        isDiscovering = true
         mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                // Tarama aktif - 30sn sonra yenile
-                scope.launch { delay(30_000); isDiscovering = false; discoverPeers() }
+                // Tarama sessizce devam ediyor
             }
             override fun onFailure(reason: Int) {
-                isDiscovering = false
-                if (reason == 2) {
-                    // ALREADY_CONNECTING - bekle
-                    scope.launch { delay(5_000); discoverPeers() }
-                } else {
-                    scope.launch { delay(15_000); discoverPeers() }
+                // Baglanti yoksa 60sn sonra tekrar dene
+                if (lastGroupIp == null) {
+                    scope.launch { delay(60_000); discoverPeers() }
                 }
             }
         })
@@ -131,18 +106,13 @@ class WifiDirectTransport(private val context: Context) {
     }
 
     private var lastGroupIp: String? = null
-    private var isDiscovering = false
 
     private fun requestConnectionInfo() {
         val mgr = manager ?: return
         val ch = channel ?: return
         mgr.requestConnectionInfo(ch) { info ->
             if (info == null || !info.groupFormed) {
-                if (lastGroupIp != null) {
-                    lastGroupIp = null
-                    // Baglanti koptu - yeniden tara
-                    scope.launch { delay(3000); discoverPeers() }
-                }
+                lastGroupIp = null
                 return@requestConnectionInfo
             }
             val ip = info.groupOwnerAddress?.hostAddress ?: return@requestConnectionInfo
@@ -181,44 +151,19 @@ class WifiDirectTransport(private val context: Context) {
     inner class WifiDirectReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                android.location.LocationManager.PROVIDERS_CHANGED_ACTION -> {
-                    val lm = context.getSystemService(Context.LOCATION_SERVICE)
-                        as android.location.LocationManager
-                    val locationOn = lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
-                        || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
-                    if (locationOn && isRunning) {
-                        // Konum acildi - yeniden tara
-                        lastGroupIp = null
-                        connectedDevices.clear()
-                        scope.launch { delay(1000); discoverPeers() }
-                    }
-                }
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                     val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-                    if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                        // WiFi Direct acildi - yeniden tara
-                        lastGroupIp = null
-                        connectedDevices.clear()
-                        scope.launch { delay(1000); discoverPeers() }
-                    } else {
-                        // WiFi Direct kapandi - temizle
-                        lastGroupIp = null
-                        connectedDevices.clear()
+                    if (state != WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                        NodeBridge.instance.log("[P2P] WiFi Direct kapali")
                     }
                 }
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     manager?.requestPeers(channel) { peerList ->
                         val peers = peerList.deviceList
                         peers.forEach { device ->
+                            // Sadece bilinen 1XX1 cihazlarına bağlan veya dene
                             if (!connectedDevices.contains(device.deviceAddress)) {
-                                // MAC karsilastirma - kucuk olan baglanir, buyuk olan bekler
-                                val myMac = android.provider.Settings.Secure.getString(
-                                    context.contentResolver, "bluetooth_address"
-                                ) ?: "00:00:00:00:00:00"
-                                if (myMac < device.deviceAddress) {
-                                    connectToPeer(device)
-                                }
-                                // Buyuk MAC bekler - karsi taraf baglanacak
+                                connectToPeer(device)
                             }
                         }
                     }
