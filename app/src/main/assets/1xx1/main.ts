@@ -424,7 +424,6 @@ setInterval(refresh, 3000);
     json({
       status:   health.status ?? "active",
       nodeId:   CFG.nodeId,
-      identity: IDENTITY.nodeId,
       role:     "leader",
       peers:    gossip.peerCount(),
       uptime:   process.uptime(),
