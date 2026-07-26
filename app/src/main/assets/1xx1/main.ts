@@ -397,7 +397,7 @@ setInterval(refresh, 3000);
   // ── /nodes (FAZ 5.1) ──────────────────────────────────────────────────────
   if (u.pathname === "/nodes") {
     json({
-      self:  { nodeId: IDENTITY.nodeId, endpoint: normalizeEndpoint("0.0.0.0", CFG.uiPort), role: "leader" },
+      self:  { nodeId: CFG.nodeId, endpoint: normalizeEndpoint("0.0.0.0", CFG.uiPort), role: "leader" },
       peers: gossip.alivePeers(),
       total: gossip.peerCount() + 1,
     });
