@@ -64,7 +64,8 @@ class WifiDirectTransport(private val context: Context) {
                 receiver = WifiDirectReceiver()
                 context.registerReceiver(receiver, intentFilter)
                 isRunning = true
-                lastGroupIp = null // Baslangicta sifirla
+                lastGroupIp = null
+                isDiscovering = false
                 NodeBridge.instance.log("[P2P] WiFi Direct baslatildi")
                 // Once eski grubu temizle, sonra tara
                 scope.launch {
